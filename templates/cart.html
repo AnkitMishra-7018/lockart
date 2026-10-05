@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}My Cart{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>My Cart</h1>
+
+    {% for g in groups %}
+        <h2>From: {{ g.shop_name }}</h2>
+        <table>
+            <tr>
+                <th>Item</th><th>Price</th><th>Quantity</th><th>Total</th><th></th>
+            </tr>
+            {% for item in g['items'] %}
+            <tr>
+                <td>
+                    {% if item.image %}
+                        <img class="thumb" src="{{ url_for('static', filename=item.image) }}" alt="">
+                    {% endif %}
+                    {{ item.name }}
+                </td>
+                <td>&#8377;{{ item.price }}</td>
+                <td>
+                    <form method="POST" action="/cart/update/{{ item.id }}" class="inline">
+                        <input type="number" name="quantity" value="{{ item.qty }}"
+                               min="0" max="{{ item.stock }}" class="stock-input">
+                        <button type="submit" class="small">Update</button>
+                    </form>
+                </td>
+                <td>&#8377;{{ item.line_total }}</td>
+                <td>
+                    <form method="POST" action="/cart/remove/{{ item.id }}" class="inline">
+                        <button type="submit" class="small danger">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3"><strong>Subtotal for {{ g.shop_name }}</strong></td>
+                <td colspan="2"><strong>&#8377;{{ g.subtotal }}</strong></td>
+            </tr>
+        </table>
+    {% else %}
+        <p>Your cart is empty. <a href="/">Browse products</a></p>
+    {% endfor %}
+
+    {% if grand_total %}
+        <h2>Grand total: &#8377;{{ grand_total }}</h2>
+        <p class="muted">Each shop will deliver as a separate order.</p>
+        <a href="/" class="cancel">Continue shopping</a>
+        <a href="/checkout" class="btn">Proceed to checkout</a>
+    {% endif %}
+{% endblock %}

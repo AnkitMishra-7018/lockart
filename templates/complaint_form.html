@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Raise a complaint{% endblock %}
+
+{% block content %}
+    <h1>Complaint about order #{{ order_id }}</h1>
+    <form method="POST">
+        <label>Type of problem</label>
+        <select name="complaint_type" required>
+            <option value="">-- choose --</option>
+            {% for value, label in types %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Describe the problem</label>
+        <textarea name="complaint_text" rows="4" required></textarea>
+
+        <button type="submit">Submit complaint</button>
+        <a href="/my-orders" class="cancel">Cancel</a>
+    </form>
+{% endblock %}

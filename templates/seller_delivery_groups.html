@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery groups{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>Smart delivery groups</h1>
+    <p class="muted">
+        Packed orders going to places within {{ radius }} km of each other (up to {{ max_size }} orders)
+        are grouped into one delivery trip. This is a prototype grouping method, not a route planner.
+    </p>
+
+    <div class="stats">
+        <div class="stat"><span>{{ waiting }}</span>Packed orders waiting</div>
+        <div class="stat"><span>{{ groups|length }}</span>Delivery groups</div>
+        <div class="stat"><span>{{ trips_saved }}</span>Trips saved</div>
+    </div>
+
+    {% if waiting > 0 %}
+        <form method="POST" action="/seller/delivery-groups/create">
+            <button type="submit">Create delivery groups ({{ waiting }} orders)</button>
+        </form>
+    {% else %}
+        <p class="muted">No packed orders are waiting. Mark orders as "packed" on the Orders page first.</p>
+    {% endif %}
+
+    {% for g in groups %}
+    <div class="order-box">
+        <div class="order-head">
+            <strong>Group #{{ g.group_id }}</strong> &ndash;
+            {{ g.order_count }} order(s) in one trip
+            <span class="badge {{ g.status }}">{{ g.status }}</span>
+            <span class="muted">({{ g.group_date.strftime('%d %b %Y') }})</span>
+        </div>
+        <table>
+            <tr><th>Stop</th><th>Order</th><th>Customer</th><th>Deliver to</th>
+                <th>From first stop</th><th>Total</th><th>Status</th></tr>
+            {% for o in g.orders %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>#{{ o.order_id }}</td>
+                <td>{{ o.customer_name }}</td>
+                <td>{{ o.delivery_address }}</td>
+                <td>{% if loop.first %}start{% elif o.from_anchor is not none %}{{ o.from_anchor }} km{% else %}&ndash;{% endif %}</td>
+                <td>&#8377;{{ o.total_amount }}</td>
+                <td><span class="badge {{ o.status }}">{{ o.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {% if g.status == 'planned' %}
+            <form method="POST" action="/seller/delivery-groups/{{ g.group_id }}/dispatch" class="inline">
+                <button type="submit" class="small">Dispatch group</button>
+            </form>
+        {% elif g.status == 'dispatched' %}
+            <form method="POST" action="/seller/delivery-groups/{{ g.group_id }}/complete" class="inline">
+                <button type="submit" class="small">Mark group delivered</button>
+            </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% endblock %}

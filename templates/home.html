@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Local Market{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>Shop from your colony</h1>
+
+    <form method="GET" action="/" class="search-bar">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search products...">
+        <select name="category">
+            <option value="">All categories</option>
+            {% for c in categories %}
+                <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Search</button>
+    </form>
+
+    <p class="muted">
+        Shops are ranked fairly, so small and new shops get a chance.
+        <a href="/shops">See how shops are ranked for you</a>
+    </p>
+
+    {% if q or selected_category %}
+        <p class="muted">{{ products|length }} result(s). <a href="/">Clear search</a></p>
+    {% endif %}
+
+    <div class="grid">
+        {% for p in products %}
+        {% set sc = scores.get(p[9]) %}
+        <a class="card" href="/product/{{ p[0] }}">
+            {% if p[6] %}
+                <img src="{{ url_for('static', filename=p[6]) }}" alt="">
+            {% else %}
+                <div class="no-img">No image</div>
+            {% endif %}
+            <div class="card-body">
+                <strong>{{ p[1] }}</strong>
+                <div class="shop">
+                    {{ p[5] }}
+                    {% if sc and sc.is_new %}<span class="tag-new">New shop</span>{% endif %}
+                </div>
+                <div class="price">&#8377;{{ p[3] }}</div>
+                {% if p[4] > 0 %}
+                    <div class="stock ok">In stock</div>
+                {% else %}
+                    <div class="stock out">Out of stock</div>
+                {% endif %}
+                {% if p[8] > 0 %}
+                    <div class="rating">&#9733; {{ p[7] }} ({{ p[8] }})</div>
+                {% endif %}
+                {% if show_scores and sc %}
+                    <div class="fvrs">Shop score: {{ sc.final_score }}</div>
+                {% endif %}
+            </div>
+        </a>
+        {% else %}
+            <p>No products found.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

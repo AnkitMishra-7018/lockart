@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Order placed{% endblock %}
+
+{% block content %}
+    <h1>Order placed!</h1>
+    <p>Thank you. You will pay cash on delivery.</p>
+
+    <table>
+        <tr><th>Order no.</th><th>Shop</th><th>Amount</th><th>Status</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td>#{{ o[0] }}</td>
+            <td>{{ o[1] }}</td>
+            <td>&#8377;{{ o[2] }}</td>
+            <td><span class="badge pending">{{ o[3] }}</span></td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <p><a href="/" class="btn">Continue shopping</a></p>
+{% endblock %}

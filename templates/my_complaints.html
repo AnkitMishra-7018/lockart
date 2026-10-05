@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}My Complaints{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>My Complaints</h1>
+    <table>
+        <tr><th>Date</th><th>Order</th><th>Shop</th><th>Type</th><th>Details</th><th>Status</th></tr>
+        {% for c in complaints %}
+        <tr>
+            <td>{{ c.complaint_date.strftime('%d %b %Y') }}</td>
+            <td>#{{ c.order_id }}</td>
+            <td>{{ c.shop_name }}</td>
+            <td>{{ c.complaint_type|replace('_', ' ') }}</td>
+            <td>{{ c.complaint_text }}</td>
+            <td><span class="badge {{ c.status }}">{{ c.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">You have not made any complaints.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

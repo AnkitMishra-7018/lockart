@@ -1,0 +1,76 @@
+body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; }
+nav { background: #1f3a5f; padding: 12px 24px; }
+nav a { color: white; margin-right: 16px; text-decoration: none; }
+main { max-width: 420px; margin: 30px auto; background: white;
+       padding: 24px; border-radius: 8px; }
+label { display: block; margin-top: 12px; font-weight: bold; }
+input, select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+button { margin-top: 18px; padding: 10px 18px; background: #1f3a5f;
+         color: white; border: none; border-radius: 4px; cursor: pointer; }
+.flash { max-width: 420px; margin: 12px auto; padding: 10px; border-radius: 4px; }
+.flash.error { background: #fde2e2; color: #a12; }
+.flash.success { background: #dff5e1; color: #1a6b2a; }
+.nav-user { color: #cfd8e3; margin-right: 16px; }
+main.wide { max-width: 900px; }
+.stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.stat { flex: 1; min-width: 120px; background: #f4f6f8; padding: 12px;
+        border-radius: 6px; text-align: center; font-size: 14px; }
+.stat span { display: block; font-size: 26px; font-weight: bold; color: #1f3a5f; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+th { background: #f4f6f8; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.badge.pending { background: #fff3cd; color: #7a5b00; }
+.badge.approved { background: #dff5e1; color: #1a6b2a; }
+.badge.blocked { background: #fde2e2; color: #a12; }
+form.inline { display: inline; }
+button.small { margin-top: 0; padding: 4px 10px; font-size: 13px; }
+button.danger { background: #a12; }
+textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; font-family: inherit; }
+.muted { color: #777; font-size: 13px; margin: 4px 0 0; }
+.thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; }
+.stock-input { width: 70px; margin-top: 0; padding: 4px; }
+a.btn { display: inline-block; padding: 8px 14px; background: #1f3a5f; color: white;
+        text-decoration: none; border-radius: 4px; }
+a.cancel { margin-left: 12px; color: #555; }
+.search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.search-bar input { flex: 2; margin-top: 0; }
+.search-bar select { flex: 1; margin-top: 0; }
+.search-bar button { margin-top: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+.card { display: block; border: 1px solid #e0e4e8; border-radius: 8px; overflow: hidden;
+        text-decoration: none; color: inherit; background: white; }
+.card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.card img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.no-img { height: 140px; background: #eceff1; color: #888; display: flex;
+          align-items: center; justify-content: center; font-size: 13px; }
+.no-img.big { height: 260px; }
+.card-body { padding: 10px; font-size: 14px; }
+.shop { color: #666; font-size: 13px; margin: 2px 0 6px; }
+.price { font-weight: bold; color: #1f3a5f; }
+.stock.ok { color: #1a6b2a; font-size: 13px; }
+.stock.out { color: #a12; font-size: 13px; }
+.rating { color: #b7791f; font-size: 13px; }
+.detail { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+.detail-images { flex: 1; min-width: 240px; }
+.detail-images img { width: 100%; border-radius: 8px; margin-bottom: 8px; }
+.detail-info { flex: 1; min-width: 240px; }
+.big-price { font-size: 24px; margin: 4px 0; }
+.seller-box { background: #f4f6f8; padding: 12px; border-radius: 6px; margin: 14px 0; }
+.review { border-bottom: 1px solid #eee; padding: 8px 0; }
+.order-box { border: 1px solid #e0e4e8; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.order-head { font-size: 16px; margin-bottom: 4px; }
+.order-head .badge { margin-left: 8px; }
+.badge.accepted { background: #dbeafe; color: #1e40af; }
+.badge.packed { background: #ede9fe; color: #5b21b6; }
+.badge.out_for_delivery { background: #ffedd5; color: #9a3412; }
+.badge.delivered { background: #dff5e1; color: #1a6b2a; }
+.badge.cancelled { background: #fde2e2; color: #a12; }
+.badge.resolved { background: #dff5e1; color: #1a6b2a; }
+.badge.rejected { background: #fde2e2; color: #a12; }
+.tag-new { background: #dbeafe; color: #1e40af; font-size: 11px; padding: 1px 6px;
+           border-radius: 8px; margin-left: 4px; }
+.fvrs { color: #5b21b6; font-size: 12px; margin-top: 4px; }
+.badge.planned { background: #dbeafe; color: #1e40af; }
+.badge.dispatched { background: #ffedd5; color: #9a3412; }
+.badge.completed { background: #dff5e1; color: #1a6b2a; }

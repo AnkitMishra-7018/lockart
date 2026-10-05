@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Seller Registration{% endblock %}
+
+{% block content %}
+    <h1>Seller Registration</h1>
+    <form method="POST">
+        <label>Shop name</label>
+        <input type="text" name="shop_name" required>
+
+        <label>Owner name</label>
+        <input type="text" name="owner_name" required>
+
+        <label>Email</label>
+        <input type="email" name="email" required>
+
+        <label>Phone</label>
+        <input type="text" name="phone" required>
+
+        <label>Password (at least 6 characters)</label>
+        <input type="password" name="password" required>
+
+        <label>Colony / locality of your shop</label>
+        <select name="locality" required>
+            <option value="">-- choose --</option>
+            {% for name in localities %}
+                <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Shop address details</label>
+        <input type="text" name="shop_address" required>
+
+        <button type="submit">Register shop</button>
+    </form>
+    <p>Already registered? <a href="/seller/login">Seller login</a></p>
+{% endblock %}

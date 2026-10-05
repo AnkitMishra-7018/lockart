@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Local Market{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        {% if session.get('customer_id') %}
+            <a href="/cart">Cart ({{ cart_count }})</a>
+            <a href="/my-orders">My Orders</a>
+            <a href="/my-complaints">Complaints</a>
+            <span class="nav-user">Hello, {{ session['customer_name'] }}</span>
+            <a href="/logout">Logout</a>
+        {% elif session.get('seller_id') %}
+            <a href="/seller/dashboard">Dashboard</a>
+            <a href="/seller/products">My Products</a>
+            <a href="/seller/orders">Orders</a>
+            <a href="/seller/orders/history">History</a>
+            <a href="/seller/delivery-groups">Delivery groups</a>
+            <a href="/seller/reviews">Reviews</a>
+            <a href="/seller/complaints">Complaints</a>
+            <a href="/seller/visibility">Visibility</a>
+            <span class="nav-user">Shop: {{ session['seller_shop'] }}</span>
+            <a href="/logout">Logout</a>
+        {% elif session.get('admin_id') %}
+            <a href="/admin/dashboard">Dashboard</a>
+            <a href="/admin/customers">Customers</a>
+            <a href="/admin/orders">Orders</a>
+            <a href="/admin/complaints">Complaints</a>
+            <a href="/admin/fvrs">FVRS</a>
+            <span class="nav-user">Admin: {{ session['admin_name'] }}</span>
+            <a href="/logout">Logout</a>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+            <a href="/seller/login">Seller Login</a>
+            <a href="/seller/register">Sell with us</a>
+            <a href="/admin/login">Admin</a>
+        {% endif %}
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <main class="{% block main_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

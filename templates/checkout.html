@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>Checkout</h1>
+
+    <h2>1. Review your items</h2>
+    {% for g in groups %}
+        <h3>From: {{ g.shop_name }}</h3>
+        <table>
+            <tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr>
+            {% for item in g['items'] %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>&#8377;{{ item.price }}</td>
+                <td>{{ item.qty }}</td>
+                <td>&#8377;{{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3"><strong>Subtotal</strong></td>
+                <td><strong>&#8377;{{ g.subtotal }}</strong></td>
+            </tr>
+        </table>
+    {% endfor %}
+    <h2>Grand total: &#8377;{{ grand_total }}</h2>
+    <p class="muted">Each shop delivers separately, so you will get {{ groups|length }} order(s).</p>
+
+    <h2>2. Delivery address</h2>
+    <form method="POST" action="/place-order">
+        <label>Deliver to</label>
+        <select name="locality">
+            <option value="">My registered address: {{ saved_address }}</option>
+            {% for name in localities %}
+                <option value="{{ name }}">Another colony: {{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <label>House / flat details (only needed if you chose another colony)</label>
+        <input type="text" name="house" placeholder="e.g. House 12, Street 3">
+
+        <h2>3. Payment</h2>
+        <p>Cash on Delivery</p>
+
+        <button type="submit">Place order</button>
+        <a href="/cart" class="cancel">Back to cart</a>
+    </form>
+{% endblock %}

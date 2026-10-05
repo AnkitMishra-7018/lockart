@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}My Reviews{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>Reviews about my shop</h1>
+
+    {% if summary.review_count > 0 %}
+        <p class="big-price">&#9733; {{ summary.avg_rating }} / 5
+            <span class="muted">({{ summary.review_count }} reviews)</span></p>
+    {% else %}
+        <p class="muted">No reviews yet. New sellers start with a neutral rating until customers review them.</p>
+    {% endif %}
+
+    {% for r in reviews %}
+        <div class="review">
+            <strong>{{ r.full_name }}</strong> &ndash; &#9733; {{ r.rating }}/5
+            <span class="muted">(order #{{ r.order_id }}, {{ r.review_date.strftime('%d %b %Y') }})</span>
+            <p>{{ r.review_text }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}

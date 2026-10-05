@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Registration{% endblock %}
+
+{% block content %}
+    <h1>Customer Registration</h1>
+    <form method="POST">
+        <label>Full name</label>
+        <input type="text" name="full_name" required>
+
+        <label>Email</label>
+        <input type="email" name="email" required>
+
+        <label>Phone</label>
+        <input type="text" name="phone" required>
+
+        <label>Password (at least 6 characters)</label>
+        <input type="password" name="password" required>
+
+        <label>Colony / locality</label>
+        <select name="locality" required>
+            <option value="">-- choose --</option>
+            {% for name in localities %}
+                <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <label>House / flat details</label>
+        <input type="text" name="address" required>
+
+        <button type="submit">Register</button>
+    </form>
+{% endblock %}

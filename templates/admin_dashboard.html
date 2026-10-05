@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>Admin Dashboard</h1>
+
+    <div class="stats">
+        <div class="stat"><span>{{ stats.customers }}</span>Customers</div>
+        <div class="stat"><span>{{ stats.sellers }}</span>Sellers</div>
+        <div class="stat"><span>{{ stats.pending_sellers }}</span>Pending approvals</div>
+        <div class="stat"><span>{{ stats.orders }}</span>Orders</div>
+        <div class="stat"><span>{{ stats.pending_complaints }}</span>Pending complaints</div>
+    </div>
+
+    <h2>Sellers</h2>
+    <table>
+        <tr>
+            <th>ID</th><th>Shop</th><th>Owner</th><th>Email</th><th>Status</th><th>Action</th>
+        </tr>
+        {% for s in sellers %}
+        <tr>
+            <td>{{ s[0] }}</td>
+            <td>{{ s[1] }}</td>
+            <td>{{ s[2] }}</td>
+            <td>{{ s[3] }}</td>
+            <td><span class="badge {{ s[4] }}">{{ s[4] }}</span></td>
+            <td>
+                {% if s[4] != 'approved' %}
+                <form method="POST" action="/admin/seller/{{ s[0] }}/approve" class="inline">
+                    <button type="submit" class="small">Approve</button>
+                </form>
+                {% endif %}
+                {% if s[4] != 'blocked' %}
+                <form method="POST" action="/admin/seller/{{ s[0] }}/block" class="inline">
+                    <button type="submit" class="small danger">Block</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No sellers have registered yet.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

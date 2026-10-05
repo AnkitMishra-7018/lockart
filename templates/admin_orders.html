@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}All Orders{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>All Orders</h1>
+    <table>
+        <tr><th>Order</th><th>Date</th><th>Customer</th><th>Shop</th><th>Items</th>
+            <th>Total</th><th>Status</th></tr>
+        {% for o in orders %}
+        <tr>
+            <td>#{{ o.order_id }}</td>
+            <td>{{ o.order_date.strftime('%d %b %Y') }}</td>
+            <td>{{ o.customer_name }}</td>
+            <td>{{ o.shop_name }}</td>
+            <td>
+                {% for item in o['items'] %}
+                    {{ item.product_name }} &times; {{ item.quantity }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>&#8377;{{ o.total_amount }}</td>
+            <td><span class="badge {{ o.status }}">{{ o.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">No orders yet.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+static/uploads/
+*.zip
+local_market_data.sql

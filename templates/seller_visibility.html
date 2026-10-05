@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}My visibility score{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>My visibility (FVRS)</h1>
+
+    {% if mine %}
+        <div class="stats">
+            <div class="stat"><span>#{{ rank }}</span>Rank among {{ shop_count }} shops</div>
+            <div class="stat"><span>{{ mine.base_score }}</span>Base score (max 90)</div>
+            <div class="stat"><span>{{ mine.avg_orders }}</span>Avg orders/day (7 days)</div>
+        </div>
+
+        <p class="muted">
+            Customers see the base score plus up to 10 distance points, so a shop close to the
+            customer ranks a little higher.
+        </p>
+
+        <table>
+            <tr><th>Component</th><th>Your value</th><th>Score (0&ndash;100)</th><th>Weight</th><th>What it means</th></tr>
+            <tr>
+                <td>Order fairness</td>
+                <td>{{ mine.avg_orders }} orders/day</td>
+                <td>{{ mine.fairness_score }}</td>
+                <td>50%</td>
+                <td>Fewer delivered orders in the last 7 days gives more points, so smaller shops get a boost.</td>
+            </tr>
+            <tr>
+                <td>Seller rating</td>
+                <td>{{ mine.rating }} / 5 ({{ mine.review_count }} reviews)</td>
+                <td>{{ mine.rating_score }}</td>
+                <td>15%</td>
+                <td>Starts at a neutral 3.5 for new shops and moves toward your real reviews.</td>
+            </tr>
+            <tr>
+                <td>Completion rate</td>
+                <td>{{ mine.completion_rate }}%</td>
+                <td>{{ mine.completion_rate }}</td>
+                <td>15%</td>
+                <td>Delivered orders compared with delivered + cancelled orders.</td>
+            </tr>
+            <tr>
+                <td>Sales volume</td>
+                <td>&#8377;{{ mine.sales_volume }} (7 days)</td>
+                <td>{{ mine.sales_score }}</td>
+                <td>10%</td>
+                <td>Value of delivered orders in the last 7 days, compared with other shops.</td>
+            </tr>
+            <tr>
+                <td>Distance</td>
+                <td>depends on the customer</td>
+                <td>&ndash;</td>
+                <td>10%</td>
+                <td>Added when a customer searches: nearer shops get more points.</td>
+            </tr>
+        </table>
+
+        {% if mine.review_count == 0 and mine.avg_orders == 0 %}
+            <p><strong>New shop:</strong> you have no orders or reviews yet, so you get the maximum
+            fairness points and a neutral rating. This helps new shops get their first customers.</p>
+        {% endif %}
+    {% else %}
+        <p>Your score is not available yet.</p>
+    {% endif %}
+
+    <h2>Saved daily scores</h2>
+    <table>
+        <tr><th>Date</th><th>Avg orders/day</th><th>Base score</th></tr>
+        {% for h in history %}
+        <tr>
+            <td>{{ h[0].strftime('%d %b %Y') }}</td>
+            <td>{{ h[1] }}</td>
+            <td>{{ h[2] }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">No saved scores yet. One is saved automatically whenever an order is delivered or cancelled.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

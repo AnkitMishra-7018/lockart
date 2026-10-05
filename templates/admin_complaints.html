@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}All Complaints{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>All Complaints</h1>
+    <table>
+        <tr><th>Date</th><th>Order</th><th>Customer</th><th>Shop</th><th>Type</th>
+            <th>Details</th><th>Status</th><th>Action</th></tr>
+        {% for c in complaints %}
+        <tr>
+            <td>{{ c.complaint_date.strftime('%d %b %Y') }}</td>
+            <td>#{{ c.order_id }}</td>
+            <td>{{ c.customer_name }}</td>
+            <td>{{ c.shop_name }}</td>
+            <td>{{ c.complaint_type|replace('_', ' ') }}</td>
+            <td>{{ c.complaint_text }}</td>
+            <td><span class="badge {{ c.status }}">{{ c.status }}</span></td>
+            <td>
+                {% if c.status == 'pending' %}
+                <form method="POST" action="/admin/complaints/{{ c.complaint_id }}/resolve" class="inline">
+                    <button type="submit" class="small">Resolve</button>
+                </form>
+                <form method="POST" action="/admin/complaints/{{ c.complaint_id }}/reject" class="inline">
+                    <button type="submit" class="small danger">Reject</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8">No complaints yet.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

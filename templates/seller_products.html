@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}My Products{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>My Products</h1>
+    <p><a href="/seller/products/add" class="btn">+ Add product</a></p>
+
+    <table>
+        <tr>
+            <th>Image</th><th>Name</th><th>Category</th><th>Price</th>
+            <th>Stock</th><th>Status</th><th>Actions</th>
+        </tr>
+        {% for p in products %}
+        <tr>
+            <td>
+                {% if p[6] %}
+                    <img class="thumb" src="{{ url_for('static', filename=p[6]) }}" alt="">
+                {% endif %}
+            </td>
+            <td>{{ p[1] }}</td>
+            <td>{{ p[2] }}</td>
+            <td>&#8377;{{ p[3] }}</td>
+            <td>
+                <form method="POST" action="/seller/products/{{ p[0] }}/stock" class="inline">
+                    <input type="number" name="stock" value="{{ p[4] }}" min="0" class="stock-input">
+                    <button type="submit" class="small">Save</button>
+                </form>
+            </td>
+            <td>
+                {% if p[5] %}
+                    <span class="badge approved">visible</span>
+                {% else %}
+                    <span class="badge blocked">hidden</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="/seller/products/{{ p[0] }}/edit">Edit</a>
+                <form method="POST" action="/seller/products/{{ p[0] }}/toggle" class="inline">
+                    <button type="submit" class="small">{% if p[5] %}Hide{% else %}Show{% endif %}</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">You have not added any products yet.</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}

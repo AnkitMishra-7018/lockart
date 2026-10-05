@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Shop ranking{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>How shops are ranked (FVRS)</h1>
+    <p class="muted">
+        Final score = 50% order fairness + 15% rating + 15% completion + 10% sales volume + 10% distance.
+        Shops with fewer recent orders get more fairness points, so small and new shops stay visible.
+    </p>
+    {% if not has_location %}
+        <p class="muted">Log in as a customer to include distance from your address. Until then,
+        every shop gets the same neutral distance score.</p>
+    {% endif %}
+
+    <table>
+        <tr>
+            <th>#</th><th>Shop</th><th>Distance</th><th>Fairness</th><th>Rating</th>
+            <th>Completion</th><th>Sales</th><th>Distance score</th><th>Final score</th>
+        </tr>
+        {% for r in ranking %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ r.shop_name }} {% if r.is_new %}<span class="tag-new">New shop</span>{% endif %}</td>
+            <td>{% if r.distance_km is not none %}{{ r.distance_km }} km{% else %}&ndash;{% endif %}</td>
+            <td>{{ r.fairness_score }}</td>
+            <td>{{ r.rating_score }}</td>
+            <td>{{ r.completion_rate }}</td>
+            <td>{{ r.sales_score }}</td>
+            <td>{{ r.distance_score }}</td>
+            <td><strong>{{ r.final_score }}</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9">No approved shops yet.</td></tr>
+        {% endfor %}
+    </table>
+    <p class="muted">Rating, completion, sales and fairness are shown as scores out of 100.</p>
+{% endblock %}

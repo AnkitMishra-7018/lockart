@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.product_name }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <p><a href="/">&larr; Back to products</a></p>
+
+    <div class="detail">
+        <div class="detail-images">
+            {% if images %}
+                {% for img in images %}
+                    <img src="{{ url_for('static', filename=img) }}" alt="">
+                {% endfor %}
+            {% else %}
+                <div class="no-img big">No image</div>
+            {% endif %}
+        </div>
+
+        <div class="detail-info">
+            <h1>{{ product.product_name }}</h1>
+            <p class="muted">{{ product.category }}</p>
+            <p class="price big-price">&#8377;{{ product.price }}</p>
+
+            {% if product.stock_quantity > 0 %}
+                <p class="stock ok">In stock ({{ product.stock_quantity }} available)</p>
+            {% else %}
+                <p class="stock out">Out of stock</p>
+            {% endif %}
+
+            <p>{{ product.description or "No description provided." }}</p>
+
+            {% if product_rating.review_count > 0 %}
+                <p class="rating">Product rating: &#9733; {{ product_rating.avg_rating }} ({{ product_rating.review_count }} reviews)</p>
+            {% else %}
+                <p class="muted">No product reviews yet.</p>
+            {% endif %}
+
+            <div class="seller-box">
+                <strong>Sold by: {{ product.shop_name }}</strong><br>
+                <span class="muted">{{ product.shop_address }}</span><br>
+                {% if seller_rating.review_count > 0 %}
+                    <span class="rating">Seller rating: &#9733; {{ seller_rating.avg_rating }} ({{ seller_rating.review_count }} reviews)</span>
+                {% else %}
+                    <span class="muted">New seller &ndash; no reviews yet</span>
+                {% endif %}
+            </div>
+
+            {% if session.get('customer_id') %}
+                {% if product.stock_quantity > 0 %}
+                    <form method="POST" action="/cart/add/{{ product.product_id }}">
+                        <label>Quantity</label>
+                        <input type="number" name="quantity" value="1" min="1"
+                               max="{{ product.stock_quantity }}" style="width:90px;">
+                        <button type="submit">Add to cart</button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <p><a href="/login" class="btn">Log in as a customer to buy</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2>Customer reviews</h2>
+    {% for r in reviews %}
+        <div class="review">
+            <strong>{{ r.full_name }}</strong> &ndash; &#9733; {{ r.rating }}
+            <p>{{ r.review_text }}</p>
+        </div>
+    {% else %}
+        <p class="muted">No reviews yet.</p>
+    {% endfor %}
+{% endblock %}

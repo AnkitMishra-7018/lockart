@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+    <h1>{{ page_title }}</h1>
+    <p>
+        <a href="/seller/orders">Current orders</a> |
+        <a href="/seller/orders/history">Order history</a>
+    </p>
+
+    {% for o in orders %}
+    <div class="order-box">
+        <div class="order-head">
+            <strong>Order #{{ o.order_id }}</strong>
+            <span class="badge {{ o.status }}">{{ o.status }}</span>
+        </div>
+        <p class="muted">
+            Placed: {{ o.order_date.strftime('%d %b %Y, %I:%M %p') }}<br>
+            Customer: {{ o.customer_name }} ({{ o.customer_phone }})<br>
+            Deliver to: {{ o.delivery_address }}
+            {% if o.delivered_at %}<br>Delivered: {{ o.delivered_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+        </p>
+        <table>
+            <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+            {% for item in o['items'] %}
+            <tr>
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>&#8377;{{ item.unit_price }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <p><strong>Total: &#8377;{{ o.total_amount }}</strong></p>
+
+        {% if show_actions %}
+            {% for next_status in transitions.get(o.status, []) %}
+                <form method="POST" action="/seller/orders/{{ o.order_id }}/status" class="inline">
+                    <input type="hidden" name="new_status" value="{{ next_status }}">
+                    <button type="submit" class="small {% if next_status == 'cancelled' %}danger{% endif %}">
+                        {{ labels[next_status] }}
+                    </button>
+                </form>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% else %}
+        <p>No orders here yet.</p>
+    {% endfor %}
+{% endblock %}
