@@ -1,0 +1,14 @@
+{% macro product_card(p, scores, show_scores) %}
+{% set sc = scores.get(p[9]) %}
+<a class="card" href="/product/{{ p[0] }}">
+  {% if p[6] %}<img src="{{ url_for('static', filename=p[6]) }}" alt="{{ p[1] }}" loading="lazy">{% else %}<div class="no-img">No image</div>{% endif %}
+  <div class="card-body">
+    <strong>{{ p[1] }}</strong>
+    <div class="shop">{{ p[5] }}{% if sc and sc.is_new %}<span class="tag-new">New shop</span>{% endif %}</div>
+    <div class="price">&#8377;{{ p[3] }}</div>
+    {% if p[4] > 0 %}<div class="stock ok">In stock</div>{% else %}<div class="stock out">Out of stock</div>{% endif %}
+    {% if p[8] > 0 %}<div class="rating">&#9733; {{ p[7] }} ({{ p[8] }})</div>{% endif %}
+    {% if show_scores and sc %}<div class="fvrs">Shop score: {{ sc.final_score }}</div>{% endif %}
+  </div>
+</a>
+{% endmacro %}

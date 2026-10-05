@@ -27,11 +27,25 @@ DEMO_SELLERS = [
     ("Demo New Store",    "demo.newstore@example.com", "Colony D", 0,  0, []),
 ]
 
-DEMO_PRODUCTS = [
-    ("Demo Milk 500ml", "Dairy & Bakery", 30),
-    ("Demo Bread", "Dairy & Bakery", 40),
-    ("Demo Rice 1kg", "Groceries", 70),
-]
+# name, category, price, photo file (in static/img/products)
+CATALOGUE = {
+    "demo.bigmart@example.com": [
+        ("Basmati Rice 1 kg", "Groceries", 70, "bigmart_rice.jpg"), ("Wheat Flour 1 kg", "Groceries", 55, "bigmart_flour.jpg"),
+        ("Toor Dal 500 g", "Groceries", 85, "bigmart_dal.jpg"), ("Sunflower Oil 1 L", "Groceries", 140, "bigmart_oil.jpg"),
+        ("Sugar 1 kg", "Groceries", 48, "bigmart_sugar.jpg")],
+    "demo.corner@example.com": [
+        ("Fresh Milk 500 ml", "Dairy & Bakery", 30, "corner_milk.jpg"), ("Paneer 200 g", "Dairy & Bakery", 90, "corner_paneer.jpg"),
+        ("Curd 400 g", "Dairy & Bakery", 40, "corner_curd.jpg"), ("Whole Wheat Bread", "Dairy & Bakery", 40, "corner_bread.jpg"),
+        ("Butter 100 g", "Dairy & Bakery", 58, "corner_butter.jpg")],
+    "demo.fresh@example.com": [
+        ("Bananas (1 dozen)", "Fruits & Vegetables", 60, "fresh_bananas.jpg"), ("Apples 1 kg", "Fruits & Vegetables", 160, "fresh_apples.jpg"),
+        ("Tomatoes 1 kg", "Fruits & Vegetables", 40, "fresh_tomatoes.jpg"), ("Onions 1 kg", "Fruits & Vegetables", 35, "fresh_onions.jpg"),
+        ("Spinach (1 bunch)", "Fruits & Vegetables", 20, "fresh_spinach.jpg")],
+    "demo.newstore@example.com": [
+        ("Masala Peanuts 100 g", "Snacks & Beverages", 30, "newstore_peanuts.jpg"), ("Dish-wash Liquid 500 ml", "Household", 99, "newstore_dishwash.jpg"),
+        ("Bath Soap 75 g", "Personal Care", 40, "newstore_soap.jpg"), ("Notebook", "Stationery", 40, "newstore_notebook.jpg"),
+        ("Ballpoint Pens (pack of 3)", "Stationery", 30, "newstore_pens.jpg")],
+}
 
 
 def clear_demo(cursor):
@@ -87,13 +101,16 @@ def seed(cursor):
         seller_id = cursor.lastrowid
 
         products = []        # (product_id, price)
-        for name, category, price in DEMO_PRODUCTS:
+        for name, category, price, photo in CATALOGUE[email]:
             cursor.execute(
                 "INSERT INTO products (seller_id, product_name, category, description, price, stock_quantity) "
                 "VALUES (%s, %s, %s, %s, %s, %s)",
                 (seller_id, name, category, "Demo product", price, 500),
             )
-            products.append((cursor.lastrowid, price))
+            product_id = cursor.lastrowid
+            cursor.execute("INSERT INTO product_images (product_id, image_path) VALUES (%s, %s)",
+                           (product_id, "img/products/" + photo))
+            products.append((product_id, price))
 
         def make_order(status, order_date, delivered_at):
             chosen = random.sample(products, k=random.randint(1, 2))

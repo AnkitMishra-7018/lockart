@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block main_class %}wide page{% endblock %}
+
+{% block content %}
+<div class="about-hero reveal">
+  <h1>About Lockart</h1>
+  <p>Lockart (Local Kart) is an online marketplace that brings small neighbourhood shops into e-commerce, and gives new and small sellers a fair chance to be seen.</p>
+</div>
+
+<div class="box reveal">
+  <h2>A mini project</h2>
+  <p>Lockart is a <strong>mini project</strong> built by a student team as part of a B.Tech course. It is a working prototype, not a real store: no real payments or deliveries happen, so please use fake details.</p>
+  <p class="muted">What makes it different: a Fair Visibility Ranking System (FVRS) that uses each shop's recent orders, rating, completion rate, distance and sales, gives new shops a fair start, and groups nearby orders into one delivery trip.</p>
+</div>
+
+<h2 class="reveal">Meet the team</h2>
+<div class="team">
+  {% for m in team %}
+  <div class="member reveal {% if loop.first %}lead{% endif %}">
+    {% if show_photos %}<img class="avatar" src="{{ url_for('static', filename='img/team/' + m.photo) }}" alt="{{ m.name }}">
+    {% else %}<div class="avatar">{{ m.initials }}</div>{% endif %}
+    <strong>{{ m.name }}</strong>
+    <div class="role">{{ m.role }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="box reveal">
+  <h2>Contact</h2>
+  <p>Ankit Mishra and team</p>
+  {% if contact_email %}<p>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>{% endif %}
+  {% if contact_phone %}<p>Phone: <a href="tel:+{{ contact_phone_digits }}">{{ contact_phone }}</a></p>{% endif %}
+</div>
+{% endblock %}

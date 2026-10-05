@@ -1,62 +1,64 @@
 {% extends "base.html" %}
-
-{% block title %}Local Market{% endblock %}
+{% from "_macros.html" import product_card %}
+{% block title %}Local shops, delivered{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>Shop from your colony</h1>
+{% set slides = [
+  {"img":"img/heroes/hero_fruitveg.jpg","tag":"Fair ranking (FVRS)","title":"Small shops get a fair chance","text":"Shops with fewer recent orders earn more visibility, so every neighbourhood shop gets seen.","link":"/shops","cta":"See how shops are ranked"},
+  {"img":"img/heroes/hero_groceries.jpg","tag":"Smart delivery grouping","title":"Nearby orders, one trip","text":"Sellers group orders going to places within 1 km, so deliveries are quicker and cheaper.","link":"/search","cta":"Start shopping"},
+  {"img":"img/heroes/hero_dairy.jpg","tag":"New shops welcome","title":"New here? You start with a boost","text":"New sellers get full fairness points and a neutral rating, so nobody is buried for being new.","link":"/seller/register","cta":"Open your shop"},
+  {"img":"img/covers/cover_fresh.jpg","tag":"Pay on delivery","title":"Order now, pay when it arrives","text":"Admin-approved local shops and cash on delivery on every order.","link":"/search","cta":"Browse products"}
+] %}
+<section class="hero" id="hero" aria-label="Lockart features">
+  {% for s in slides %}
+  <div class="slide {% if loop.first %}on{% endif %}" style="background-image:url('{{ url_for('static', filename=s.img) }}')">
+    <div class="slide-text"><span class="pill">{{ s.tag }}</span><h2>{{ s.title }}</h2><p>{{ s.text }}</p><a class="btn" href="{{ s.link }}">{{ s.cta }}</a></div>
+  </div>{% endfor %}
+  <button class="sbtn prev" type="button" aria-label="Previous">&lsaquo;</button>
+  <button class="sbtn next" type="button" aria-label="Next">&rsaquo;</button>
+  <div class="dots"></div>
+</section>
 
-    <form method="GET" action="/" class="search-bar">
-        <input type="text" name="q" value="{{ q }}" placeholder="Search products...">
-        <select name="category">
-            <option value="">All categories</option>
-            {% for c in categories %}
-                <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Search</button>
-    </form>
+{% if session.get('customer_id') %}
+<div class="welcome reveal"><span>Welcome back, <strong>{{ session['customer_name'] }}</strong></span>
+  <span><a href="/my-orders">My orders</a> &middot; <a href="/cart">Cart ({{ cart_count }})</a></span></div>
+{% endif %}
 
-    <p class="muted">
-        Shops are ranked fairly, so small and new shops get a chance.
-        <a href="/shops">See how shops are ranked for you</a>
-    </p>
+<div class="strip reveal"><span>Cash on delivery</span><span>Admin-approved shops</span><span>Fair ranking for small shops</span><span>Grouped, efficient delivery</span></div>
 
-    {% if q or selected_category %}
-        <p class="muted">{{ products|length }} result(s). <a href="/">Clear search</a></p>
-    {% endif %}
+<section class="sec reveal"><div class="sec-h"><h2>Shop by category</h2><a href="/search">All products</a></div>
+  <div class="cats">{% for name, img in categories %}
+    <a class="cat" href="/search?category={{ name|urlencode }}"><img src="{{ url_for('static', filename='img/products/thumb/' + img) }}" alt="" loading="lazy"><span>{{ name }}</span></a>{% endfor %}
+  </div></section>
 
-    <div class="grid">
-        {% for p in products %}
-        {% set sc = scores.get(p[9]) %}
-        <a class="card" href="/product/{{ p[0] }}">
-            {% if p[6] %}
-                <img src="{{ url_for('static', filename=p[6]) }}" alt="">
-            {% else %}
-                <div class="no-img">No image</div>
-            {% endif %}
-            <div class="card-body">
-                <strong>{{ p[1] }}</strong>
-                <div class="shop">
-                    {{ p[5] }}
-                    {% if sc and sc.is_new %}<span class="tag-new">New shop</span>{% endif %}
-                </div>
-                <div class="price">&#8377;{{ p[3] }}</div>
-                {% if p[4] > 0 %}
-                    <div class="stock ok">In stock</div>
-                {% else %}
-                    <div class="stock out">Out of stock</div>
-                {% endif %}
-                {% if p[8] > 0 %}
-                    <div class="rating">&#9733; {{ p[7] }} ({{ p[8] }})</div>
-                {% endif %}
-                {% if show_scores and sc %}
-                    <div class="fvrs">Shop score: {{ sc.final_score }}</div>
-                {% endif %}
-            </div>
-        </a>
-        {% else %}
-            <p>No products found.</p>
-        {% endfor %}
-    </div>
+{% if reorder %}<section class="sec reveal"><div class="sec-h"><h2>Order again</h2></div>
+  <div class="grid">{% for p in reorder %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
+
+<section class="sec reveal"><div class="sec-h"><h2>Shops near you</h2><a href="/shops">See ranking</a></div>
+  <div class="shopgrid">{% for r in shops %}
+    <a class="shopcard" href="/search">
+      <div class="cover" {% if r.cover %}style="background-image:url('{{ url_for('static', filename=r.cover) }}')"{% endif %}></div>
+      <div class="sbody"><strong>{{ r.shop_name }}</strong>{% if r.is_new %}<span class="tag-new">New shop</span>{% endif %}
+        <div class="muted">{% if r.distance_km is not none %}{{ r.distance_km }} km away &middot; {% endif %}&#9733; {{ r.rating }}</div></div>
+    </a>{% endfor %}</div></section>
+
+<section class="sec reveal"><div class="sec-h"><h2>Picked for you</h2><a href="/search">View all</a></div>
+  <div class="grid">{% for p in picks %}{{ product_card(p, scores, show_scores) }}{% else %}<p class="muted">No products yet.</p>{% endfor %}</div></section>
+
+<section class="sec how reveal"><h2>How Lockart works</h2>
+  <div class="steps"><div><b>1</b><h3>Pick local shops</h3><p>Search products from approved shops in your colony.</p></div>
+    <div><b>2</b><h3>Order, pay on delivery</h3><p>Place one order per shop and pay cash when it arrives.</p></div>
+    <div><b>3</b><h3>One trip, many orders</h3><p>Nearby orders are grouped so delivery is faster.</p></div></div></section>
+
+<section class="sec fair reveal"><h2>Fair ranking, explained</h2>
+  <p class="muted">A busy shop already has customers. A new shop does not. Lockart gives fewer recent orders more visibility.</p>
+  <div class="bar"><span>Busy shop: 20 orders a day</span><div><i style="--w:6%"></i></div><em>Fairness 0</em></div>
+  <div class="bar"><span>Growing shop: 10 orders a day</span><div><i style="--w:67%"></i></div><em>Fairness 67</em></div>
+  <div class="bar"><span>New shop: 0 orders a day</span><div><i style="--w:100%"></i></div><em>Fairness 100</em></div></section>
+
+{% if from_new %}<section class="sec reveal"><div class="sec-h"><h2>From new shops</h2></div>
+  <div class="grid">{% for p in from_new %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
+
+{% if not session.get('seller_id') %}
+<section class="cta reveal"><div><h2>Own a small shop?</h2><p>Join Lockart and reach customers in your neighbourhood.</p></div><a class="btn" href="/seller/register">Sell with us</a></section>{% endif %}
 {% endblock %}

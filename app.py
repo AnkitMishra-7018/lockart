@@ -42,8 +42,77 @@ def file_too_large(error):
 # =====================================================
 # GENERAL PAGES
 # =====================================================
+CATEGORY_TILES = [("Groceries", "bigmart_rice.jpg"), ("Dairy & Bakery", "corner_milk.jpg"),
+                  ("Fruits & Vegetables", "fresh_apples.jpg"), ("Snacks & Beverages", "newstore_peanuts.jpg"),
+                  ("Household", "newstore_dishwash.jpg"), ("Personal Care", "newstore_soap.jpg"),
+                  ("Stationery", "newstore_notebook.jpg")]
+SHOP_COVERS = {"big mart": "cover_bigmart.jpg", "corner": "cover_corner.jpg",
+               "fresh basket": "cover_fresh.jpg", "new store": "cover_newstore.jpg"}
+
+# Same columns as the search page, so the product card works for both
+PRODUCT_SELECT = (
+    "SELECT p.product_id, p.product_name, p.category, p.price, p.stock_quantity, s.shop_name, "
+    "(SELECT image_path FROM product_images WHERE product_id = p.product_id LIMIT 1), "
+    "(SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.product_id), "
+    "(SELECT COUNT(*) FROM product_reviews WHERE product_id = p.product_id), s.seller_id "
+    "FROM products p JOIN sellers s ON s.seller_id = p.seller_id "
+    "WHERE p.is_active = 1 AND s.status = 'approved' AND p.stock_quantity > 0 "
+)
+
+
 @app.route("/")
 def home():
+    """Home page: a few products, and more of everything else (slider, shops, explainers)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    customer_lat = customer_lon = None
+    if "customer_id" in session:
+        cursor.execute("SELECT latitude, longitude FROM customers WHERE customer_id = %s",
+                       (session["customer_id"],))
+        loc = cursor.fetchone()
+        if loc and loc[0] is not None and loc[1] is not None:
+            customer_lat, customer_lon = float(loc[0]), float(loc[1])
+    ranking = rank_sellers_for_customer(cursor, customer_lat, customer_lon)
+    scores = {r["seller_id"]: r for r in ranking}
+
+    cursor.execute(PRODUCT_SELECT + "ORDER BY p.created_at DESC LIMIT 200")
+    products = cursor.fetchall()
+
+    reorder = []
+    if "customer_id" in session:
+        cursor.execute(
+            PRODUCT_SELECT + "AND p.product_id IN (SELECT oi.product_id FROM order_items oi "
+            "JOIN orders o ON o.order_id = oi.order_id WHERE o.customer_id = %s) "
+            "ORDER BY p.created_at DESC LIMIT 4", (session["customer_id"],))
+        reorder = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # Picks: up to 2 products from each shop, best-ranked shops first, 8 in total
+    by_shop = {}
+    for p in products:
+        by_shop.setdefault(p[9], []).append(p)
+    ranked_ids = [r["seller_id"] for r in ranking if r["seller_id"] in by_shop]
+    picks = []
+    for round_no in range(2):
+        for sid in ranked_ids:
+            if len(by_shop[sid]) > round_no:
+                picks.append(by_shop[sid][round_no])
+    new_ids = [r["seller_id"] for r in ranking if r["is_new"]]
+    from_new = [p for p in products if p[9] in new_ids][:4]
+
+    shops = ranking[:4]
+    for r in shops:
+        name = r["shop_name"].lower()
+        r["cover"] = next(("img/covers/" + f for k, f in SHOP_COVERS.items() if k in name), None)
+
+    return render_template("home.html", picks=picks[:8], from_new=from_new, reorder=reorder,
+                           shops=shops, scores=scores, show_scores=SHOW_FVRS_ON_CARDS,
+                           categories=CATEGORY_TILES)
+
+
+@app.route("/search")
+def search():
     q = request.args.get("q", "").strip()
     selected_category = request.args.get("category", "").strip()
 
@@ -95,7 +164,7 @@ def home():
         key=lambda p: (p[4] <= 0, -scores.get(p[9], {}).get("final_score", 0)),
     )
 
-    return render_template("home.html", products=products, q=q,
+    return render_template("search.html", products=products, q=q,
                            selected_category=selected_category, categories=CATEGORIES,
                            scores=scores, show_scores=SHOW_FVRS_ON_CARDS)
 
@@ -168,6 +237,34 @@ def product_detail(product_id):
     return render_template("product_detail.html", product=product, images=images,
                            product_rating=product_rating, reviews=reviews,
                            seller_rating=seller_rating)
+
+
+@app.context_processor
+def inject_site_info():
+    """Contact details for the footer. They come from settings, not from the code."""
+    phone = os.environ.get("CONTACT_PHONE", "")
+    digits = "".join(c for c in phone if c.isdigit())
+    if len(digits) == 10:
+        digits = "91" + digits               # add the India country code
+    return {"contact_phone": phone, "contact_phone_digits": digits,
+            "contact_email": os.environ.get("CONTACT_EMAIL", "")}
+
+
+TEAM = [
+    ("Ankit Mishra", "Team Leader", "AM", "ankit.jpg"),
+    ("Amay Kr. Mishra", "Team Member", "AK", "amay.jpg"),
+    ("Aman Pratap Singh", "Team Member", "AP", "aman_pratap.jpg"),
+    ("Aman Kumar", "Team Member", "AK", "aman_kumar.jpg"),
+]
+
+
+@app.route("/about")
+def about():
+    team = [{"name": n, "role": r, "initials": i, "photo": p} for n, r, i, p in TEAM]
+    # Photos are shown only when all four exist, so the page never mixes photos and initials
+    team_folder = os.path.join(app.root_path, "static", "img", "team")
+    show_photos = all(os.path.exists(os.path.join(team_folder, m["photo"])) for m in team)
+    return render_template("about.html", team=team, show_photos=show_photos)
 
 
 @app.route("/logout")
