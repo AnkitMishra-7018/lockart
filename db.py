@@ -26,6 +26,10 @@ _config = {
 if os.environ.get("DB_SSL_CA"):                  # online databases (like Aiven) need an encrypted connection
     _config["ssl_ca"] = os.environ["DB_SSL_CA"]
 
+# Always use Indian time inside MySQL, so the laptop and the online database agree
+# (online servers usually run on UTC, which is 5.5 hours behind).
+TIMEZONE = os.environ.get("DB_TIMEZONE", "+05:30")
+
 _pool = None
 
 
@@ -59,12 +63,17 @@ def get_connection():
         )
     for _ in range(60):                    # if all connections are busy, wait up to about 6 seconds
         try:
-            conn = ManagedConnection(_pool.get_connection())
+            raw = _pool.get_connection()
             break
         except pooling.PoolError:
             time.sleep(0.1)
     else:
         raise RuntimeError("The database is busy. Please try again.")
+
+    cursor = raw.cursor()                  # a returned connection forgets its time zone, so set it again
+    cursor.execute("SET time_zone = %s", (TIMEZONE,))
+    cursor.close()
+    conn = ManagedConnection(raw)
 
     if has_app_context():                  # remember it, so it can be returned even after an error
         g.setdefault("_open_connections", []).append(conn)
