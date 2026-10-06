@@ -32,7 +32,7 @@
       <a href="/">Home</a>
       {% if session.get('customer_id') %}
         <a href="/cart">Cart<span class="cartn">{{ cart_count }}</span></a>
-        <a href="/my-orders">My Orders</a><a href="/my-complaints">Complaints</a>
+        <a href="/my-orders">My Orders</a><a href="/wishlist">Wishlist</a><a href="/my-complaints">Complaints</a>
         <span class="nav-user">Hi, {{ session['customer_name'] }}</span><a href="/logout">Logout</a>
       {% elif session.get('seller_id') %}
         <a href="/seller/dashboard">Dashboard</a><a href="/seller/products">Products</a>

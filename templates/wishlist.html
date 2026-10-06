@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card %}
+{% block title %}My wishlist{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>My wishlist</h1>
+<div class="grid">{% for p in products %}{{ product_card(p, {}, False) }}{% else %}
+  <div class="empty" style="grid-column:1/-1"><h2>Nothing saved yet</h2><p class="muted">Tap "Save for later" on any product.</p><a class="btn" href="/search">Browse products</a></div>{% endfor %}</div>
+{% endblock %}

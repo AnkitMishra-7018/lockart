@@ -223,18 +223,41 @@ def shops():
                            has_location=customer_lat is not None)
 
 
+_wishlist_ready = False
+
+
+def ensure_wishlist():
+    """Creates the wishlist table the first time it is needed (works on every database)."""
+    global _wishlist_ready
+    if _wishlist_ready:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS wishlist (customer_id INT NOT NULL, product_id INT NOT NULL, "
+        "added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (customer_id, product_id), "
+        "FOREIGN KEY (customer_id) REFERENCES customers(customer_id), "
+        "FOREIGN KEY (product_id) REFERENCES products(product_id))")
+    conn.commit()
+    cursor.close()
+    conn.close()
+    _wishlist_ready = True
+
+
+def cover_for(shop_name):
+    name = shop_name.lower()
+    return next(("img/covers/" + f for k, f in SHOP_COVERS.items() if k in name), None)
+
+
 @app.route("/product/<int:product_id>")
 def product_detail(product_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-
     cursor.execute(
         "SELECT p.product_id, p.product_name, p.category, p.description, p.price, "
         "p.stock_quantity, s.seller_id, s.shop_name, s.shop_address "
         "FROM products p JOIN sellers s ON s.seller_id = p.seller_id "
-        "WHERE p.product_id = %s AND p.is_active = 1 AND s.status = 'approved'",
-        (product_id,),
-    )
+        "WHERE p.product_id = %s AND p.is_active = 1 AND s.status = 'approved'", (product_id,))
     product = cursor.fetchone()
     if not product:
         cursor.close()
@@ -244,53 +267,111 @@ def product_detail(product_id):
 
     cursor.execute("SELECT image_path FROM product_images WHERE product_id = %s", (product_id,))
     images = [row["image_path"] for row in cursor.fetchall()]
-
-    cursor.execute(
-        "SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count "
-        "FROM product_reviews WHERE product_id = %s",
-        (product_id,),
-    )
+    cursor.execute("SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count "
+                   "FROM product_reviews WHERE product_id = %s", (product_id,))
     product_rating = cursor.fetchone()
-
-    cursor.execute(
-        "SELECT r.rating, r.review_text, r.review_date, c.full_name "
-        "FROM product_reviews r JOIN customers c ON c.customer_id = r.customer_id "
-        "WHERE r.product_id = %s ORDER BY r.review_date DESC",
-        (product_id,),
-    )
+    cursor.execute("SELECT rating, COUNT(*) AS n FROM product_reviews WHERE product_id = %s GROUP BY rating",
+                   (product_id,))
+    counts = {r["rating"]: r["n"] for r in cursor.fetchall()}
+    total = sum(counts.values())
+    bars = [(star, counts.get(star, 0), round(counts.get(star, 0) * 100 / total) if total else 0)
+            for star in (5, 4, 3, 2, 1)]
+    cursor.execute("SELECT r.rating, r.review_text, r.review_date, c.full_name FROM product_reviews r "
+                   "JOIN customers c ON c.customer_id = r.customer_id WHERE r.product_id = %s "
+                   "ORDER BY r.review_date DESC", (product_id,))
     reviews = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count "
-        "FROM seller_reviews WHERE seller_id = %s",
-        (product["seller_id"],),
-    )
+    cursor.execute("SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count "
+                   "FROM seller_reviews WHERE seller_id = %s", (product["seller_id"],))
     seller_rating = cursor.fetchone()
 
+    wished = False
+    if "customer_id" in session:
+        ensure_wishlist()
+        cursor.execute("SELECT 1 AS x FROM wishlist WHERE customer_id = %s AND product_id = %s",
+                       (session["customer_id"], product_id))
+        wished = cursor.fetchone() is not None
+    plain = conn.cursor()
+    plain.execute(PRODUCT_SELECT + "AND p.seller_id = %s AND p.product_id <> %s "
+                  "ORDER BY p.created_at DESC LIMIT 4", (product["seller_id"], product_id))
+    more = plain.fetchall()
+    plain.close()
     cursor.close()
     conn.close()
     return render_template("product_detail.html", product=product, images=images,
-                           product_rating=product_rating, reviews=reviews,
-                           seller_rating=seller_rating)
+                           product_rating=product_rating, bars=bars, reviews=reviews,
+                           seller_rating=seller_rating, wished=wished, more=more)
 
 
-@app.context_processor
-def inject_site_info():
-    """Contact details for the footer. They come from settings, not from the code."""
-    phone = os.environ.get("CONTACT_PHONE", "")
-    digits = "".join(c for c in phone if c.isdigit())
-    if len(digits) == 10:
-        digits = "91" + digits               # add the India country code
-    return {"contact_phone": phone, "contact_phone_digits": digits,
-            "contact_email": os.environ.get("CONTACT_EMAIL", "")}
+@app.route("/shop/<int:seller_id>")
+def shop_page(seller_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT seller_id, shop_name, shop_address FROM sellers "
+                   "WHERE seller_id = %s AND status = 'approved'", (seller_id,))
+    shop = cursor.fetchone()
+    if not shop:
+        cursor.close()
+        conn.close()
+        flash("That shop is not available.", "error")
+        return redirect(url_for("shops"))
+    cursor.execute("SELECT r.rating, r.review_text, c.full_name FROM seller_reviews r "
+                   "JOIN customers c ON c.customer_id = r.customer_id WHERE r.seller_id = %s "
+                   "ORDER BY r.review_date DESC LIMIT 6", (seller_id,))
+    reviews = cursor.fetchall()
+    plain = conn.cursor()
+    lat = lon = None
+    if "customer_id" in session:
+        plain.execute("SELECT latitude, longitude FROM customers WHERE customer_id = %s",
+                      (session["customer_id"],))
+        loc = plain.fetchone()
+        if loc and loc[0] is not None and loc[1] is not None:
+            lat, lon = float(loc[0]), float(loc[1])
+    info = next((r for r in rank_sellers_for_customer(plain, lat, lon) if r["seller_id"] == seller_id), None)
+    plain.execute(PRODUCT_SELECT + "AND p.seller_id = %s ORDER BY p.created_at DESC", (seller_id,))
+    products = plain.fetchall()
+    plain.close()
+    cursor.close()
+    conn.close()
+    return render_template("shop.html", shop=shop, info=info, products=products, reviews=reviews,
+                           cover=cover_for(shop["shop_name"]))
 
 
-TEAM = [
-    ("Ankit Mishra", "Team Leader", "AM", "ankit.jpg"),
-    ("Amay Kr. Mishra", "Team Member", "AK", "amay.jpg"),
-    ("Aman Pratap Singh", "Team Member", "AP", "aman_pratap.jpg"),
-    ("Aman Kumar", "Team Member", "AK", "aman_kumar.jpg"),
-]
+@app.route("/wishlist")
+def wishlist():
+    if not customer_logged_in():
+        flash("Please log in as a customer first.", "error")
+        return redirect(url_for("login"))
+    ensure_wishlist()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(PRODUCT_SELECT + "AND p.product_id IN (SELECT product_id FROM wishlist "
+                   "WHERE customer_id = %s) ORDER BY p.created_at DESC", (session["customer_id"],))
+    products = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("wishlist.html", products=products)
+
+
+@app.route("/wishlist/toggle/<int:product_id>", methods=["POST"])
+def wishlist_toggle(product_id):
+    if not customer_logged_in():
+        flash("Please log in as a customer to save products.", "error")
+        return redirect(url_for("login"))
+    ensure_wishlist()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM wishlist WHERE customer_id = %s AND product_id = %s",
+                   (session["customer_id"], product_id))
+    if cursor.rowcount == 0:
+        cursor.execute("INSERT INTO wishlist (customer_id, product_id) VALUES (%s, %s)",
+                       (session["customer_id"], product_id))
+        flash("Saved to your wishlist.", "success")
+    else:
+        flash("Removed from your wishlist.", "success")
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(request.referrer or url_for("product_detail", product_id=product_id))
 
 
 @app.route("/about")

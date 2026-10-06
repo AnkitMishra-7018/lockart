@@ -38,3 +38,12 @@
   if (b && f) { b.addEventListener("click", function () { f.classList.toggle("open"); });
     document.addEventListener("click", function (e) { if (f.classList.contains("open") && !f.contains(e.target) && e.target !== b) f.classList.remove("open"); }); }
 })();
+(function () {
+  var q = document.getElementById("qty"); if (!q) return;
+  document.querySelectorAll(".qty-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var v = (parseInt(q.value, 10) || 1) + parseInt(b.dataset.d, 10);
+      q.value = Math.max(parseInt(q.min, 10) || 1, Math.min(parseInt(q.max, 10) || 99, v));
+    });
+  });
+})();

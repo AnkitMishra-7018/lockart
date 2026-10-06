@@ -1,73 +1,54 @@
 {% extends "base.html" %}
-
+{% from "_macros.html" import product_card %}
 {% block title %}{{ product.product_name }}{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <p><a href="/">&larr; Back to products</a></p>
+<nav class="crumbs"><a href="/">Home</a> / <a href="/search?category={{ product.category|urlencode }}">{{ product.category }}</a> / {{ product.product_name }}</nav>
+<div class="pd">
+  <div class="gallery">
+    {% for img in images %}<img src="{{ url_for('static', filename=img) }}" alt="{{ product.product_name }}">
+    {% else %}<div class="no-img big">No image</div>{% endfor %}
+  </div>
+  <div class="pinfo">
+    <span class="chip">{{ product.category }}</span>
+    <h1>{{ product.product_name }}</h1>
+    <div class="stars">{% for i in range(5) %}<span class="{{ 'on' if i < (product_rating.avg_rating or 0)|float|round else '' }}">&#9733;</span>{% endfor %}
+      <span class="muted">{% if product_rating.review_count %}{{ product_rating.avg_rating }} ({{ product_rating.review_count }} reviews){% else %}No reviews yet{% endif %}</span></div>
+    <div class="price big-price">&#8377;{{ product.price }}</div>
+    {% if product.stock_quantity > 0 %}<p class="stock ok">In stock{% if product.stock_quantity <= 5 %} &ndash; only {{ product.stock_quantity }} left{% endif %}</p>
+    {% else %}<p class="stock out">Out of stock</p>{% endif %}
+    <p>{{ product.description or "No description provided." }}</p>
 
-    <div class="detail">
-        <div class="detail-images">
-            {% if images %}
-                {% for img in images %}
-                    <img src="{{ url_for('static', filename=img) }}" alt="">
-                {% endfor %}
-            {% else %}
-                <div class="no-img big">No image</div>
-            {% endif %}
-        </div>
+    {% if session.get('customer_id') %}
+      {% if product.stock_quantity > 0 %}
+      <form id="buyform" method="POST" action="/cart/add/{{ product.product_id }}" class="buyrow">
+        <div class="qty"><button type="button" class="qty-btn" data-d="-1">&minus;</button>
+          <input id="qty" type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}">
+          <button type="button" class="qty-btn" data-d="1">+</button></div>
+        <button type="submit">Add to cart</button>
+      </form>{% endif %}
+      <form method="POST" action="/wishlist/toggle/{{ product.product_id }}" class="inline">
+        <button type="submit" class="heart {{ 'on' if wished else '' }}">{{ '&#9829; Saved' if wished else '&#9825; Save for later' }}</button></form>
+    {% else %}<p><a href="/login" class="btn">Log in as a customer to buy</a></p>{% endif %}
+    <p class="muted">Cash on delivery &middot; Sold by an admin-approved local shop</p>
 
-        <div class="detail-info">
-            <h1>{{ product.product_name }}</h1>
-            <p class="muted">{{ product.category }}</p>
-            <p class="price big-price">&#8377;{{ product.price }}</p>
+    <a class="seller-card" href="/shop/{{ product.seller_id }}">
+      <span class="avatar sm">{{ product.shop_name[:2]|upper }}</span>
+      <span><strong>{{ product.shop_name }}</strong><br><span class="muted">{{ product.shop_address }}</span><br>
+        {% if seller_rating.review_count %}<span class="rating">&#9733; {{ seller_rating.avg_rating }} ({{ seller_rating.review_count }})</span>{% else %}<span class="tag-new">New shop</span>{% endif %}</span>
+    </a>
+  </div>
+</div>
 
-            {% if product.stock_quantity > 0 %}
-                <p class="stock ok">In stock ({{ product.stock_quantity }} available)</p>
-            {% else %}
-                <p class="stock out">Out of stock</p>
-            {% endif %}
+<section class="sec"><h2>Customer reviews</h2>
+  <div class="rwrap"><div class="rbars">
+    {% for star, n, pct in bars %}<div class="rb"><span>{{ star }} &#9733;</span><div><i style="width:{{ pct }}%"></i></div><em>{{ n }}</em></div>{% endfor %}</div>
+    <div>{% for r in reviews %}<div class="review"><strong>{{ r.full_name }}</strong> &ndash; &#9733; {{ r.rating }}<p>{{ r.review_text }}</p></div>
+      {% else %}<p class="muted">No reviews yet. Order this product and be the first to review it.</p>{% endfor %}</div></div></section>
 
-            <p>{{ product.description or "No description provided." }}</p>
+{% if more %}<section class="sec"><div class="sec-h"><h2>More from {{ product.shop_name }}</h2><a href="/shop/{{ product.seller_id }}">Visit shop</a></div>
+  <div class="grid">{% for p in more %}{{ product_card(p, {}, False) }}{% endfor %}</div></section>{% endif %}
 
-            {% if product_rating.review_count > 0 %}
-                <p class="rating">Product rating: &#9733; {{ product_rating.avg_rating }} ({{ product_rating.review_count }} reviews)</p>
-            {% else %}
-                <p class="muted">No product reviews yet.</p>
-            {% endif %}
-
-            <div class="seller-box">
-                <strong>Sold by: {{ product.shop_name }}</strong><br>
-                <span class="muted">{{ product.shop_address }}</span><br>
-                {% if seller_rating.review_count > 0 %}
-                    <span class="rating">Seller rating: &#9733; {{ seller_rating.avg_rating }} ({{ seller_rating.review_count }} reviews)</span>
-                {% else %}
-                    <span class="muted">New seller &ndash; no reviews yet</span>
-                {% endif %}
-            </div>
-
-            {% if session.get('customer_id') %}
-                {% if product.stock_quantity > 0 %}
-                    <form method="POST" action="/cart/add/{{ product.product_id }}">
-                        <label>Quantity</label>
-                        <input type="number" name="quantity" value="1" min="1"
-                               max="{{ product.stock_quantity }}" style="width:90px;">
-                        <button type="submit">Add to cart</button>
-                    </form>
-                {% endif %}
-            {% else %}
-                <p><a href="/login" class="btn">Log in as a customer to buy</a></p>
-            {% endif %}
-        </div>
-    </div>
-
-    <h2>Customer reviews</h2>
-    {% for r in reviews %}
-        <div class="review">
-            <strong>{{ r.full_name }}</strong> &ndash; &#9733; {{ r.rating }}
-            <p>{{ r.review_text }}</p>
-        </div>
-    {% else %}
-        <p class="muted">No reviews yet.</p>
-    {% endfor %}
+{% if session.get('customer_id') and product.stock_quantity > 0 %}
+<div class="sticky-buy"><strong>&#8377;{{ product.price }}</strong><button type="submit" form="buyform">Add to cart</button></div>{% endif %}
 {% endblock %}

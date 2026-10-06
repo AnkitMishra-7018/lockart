@@ -62,6 +62,10 @@ def clear_demo(cursor):
         cursor.execute("DELETE FROM order_items WHERE order_id IN (" + orders_of_seller + ")", (sid,))
         cursor.execute("DELETE FROM orders WHERE seller_id = %s", (sid,))
         cursor.execute("DELETE FROM product_images WHERE product_id IN (" + products_of_seller + ")", (sid,))
+        try:      # the wishlist table may not exist yet
+            cursor.execute("DELETE FROM wishlist WHERE product_id IN (" + products_of_seller + ")", (sid,))
+        except Exception:
+            pass
         cursor.execute("DELETE FROM products WHERE seller_id = %s", (sid,))
         cursor.execute("DELETE FROM seller_metrics WHERE seller_id = %s", (sid,))
         cursor.execute("DELETE FROM sellers WHERE seller_id = %s", (sid,))

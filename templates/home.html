@@ -36,7 +36,7 @@
 
 <section class="sec reveal"><div class="sec-h"><h2>Shops near you</h2><a href="/shops">See ranking</a></div>
   <div class="shopgrid">{% for r in shops %}
-    <a class="shopcard" href="/search">
+    <a class="shopcard" href="/shop/{{ r.seller_id }}">
       <div class="cover" {% if r.cover %}style="background-image:url('{{ url_for('static', filename=r.cover) }}')"{% endif %}></div>
       <div class="sbody"><strong>{{ r.shop_name }}</strong>{% if r.is_new %}<span class="tag-new">New shop</span>{% endif %}
         <div class="muted">{% if r.distance_km is not none %}{{ r.distance_km }} km away &middot; {% endif %}&#9733; {{ r.rating }}</div></div>
