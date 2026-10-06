@@ -1,13 +1,19 @@
 {% macro product_card(p, scores, show_scores) %}
 {% set sc = scores.get(p[9]) %}
 <a class="card" href="/product/{{ p[0] }}">
-  {% if p[6] %}<img src="{{ url_for('static', filename=p[6]) }}" alt="{{ p[1] }}" loading="lazy">{% else %}<div class="no-img">No image</div>{% endif %}
+  <div class="imgwrap">
+    {% if p[6] %}<img src="{{ url_for('static', filename=p[6]) }}" alt="{{ p[1] }}" loading="lazy">{% else %}<div class="no-img">No image</div>{% endif %}
+    <div class="badges">
+      {% if p[4] <= 0 %}<span class="bdg out">Out of stock</span>{% endif %}
+      {% if sc and sc.is_new %}<span class="bdg new">New shop</span>{% endif %}
+      {% if p[4] > 0 and p[4] <= 5 %}<span class="bdg low">Only {{ p[4] }} left</span>{% endif %}
+      {% if p[7] and p[7] >= 4.5 %}<span class="bdg top">Top rated</span>{% endif %}
+    </div>
+  </div>
   <div class="card-body">
     <strong>{{ p[1] }}</strong>
-    <div class="shop">{{ p[5] }}{% if sc and sc.is_new %}<span class="tag-new">New shop</span>{% endif %}</div>
-    <div class="price">&#8377;{{ p[3] }}</div>
-    {% if p[4] > 0 %}<div class="stock ok">In stock</div>{% else %}<div class="stock out">Out of stock</div>{% endif %}
-    {% if p[8] > 0 %}<div class="rating">&#9733; {{ p[7] }} ({{ p[8] }})</div>{% endif %}
+    <div class="shop">{{ p[5] }}</div>
+    <div class="prow"><span class="price">&#8377;{{ p[3] }}</span>{% if p[8] > 0 %}<span class="rating">&#9733; {{ p[7] }} ({{ p[8] }})</span>{% endif %}</div>
     {% if show_scores and sc %}<div class="fvrs">Shop score: {{ sc.final_score }}</div>{% endif %}
   </div>
 </a>

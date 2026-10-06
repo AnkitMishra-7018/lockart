@@ -33,3 +33,8 @@
   h.addEventListener("mouseleave", reset);
   go(0);
 })();
+(function () {
+  var b = document.getElementById("fbtn"), f = document.getElementById("filters");
+  if (b && f) { b.addEventListener("click", function () { f.classList.toggle("open"); });
+    document.addEventListener("click", function (e) { if (f.classList.contains("open") && !f.contains(e.target) && e.target !== b) f.classList.remove("open"); }); }
+})();

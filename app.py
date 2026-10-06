@@ -111,62 +111,97 @@ def home():
                            categories=CATEGORY_TILES)
 
 
+PER_PAGE = 12
+SORT_OPTIONS = [("best", "Best match (fair ranking)"), ("price_asc", "Price: low to high"),
+                ("price_desc", "Price: high to low"), ("newest", "Newest"), ("rating", "Top rated")]
+
+
 @app.route("/search")
 def search():
     q = request.args.get("q", "").strip()
-    selected_category = request.args.get("category", "").strip()
+    category = request.args.get("category", "").strip()
+    category = category if category in CATEGORIES else ""
+    sort = request.args.get("sort", "best")
+    in_stock = request.args.get("in_stock") == "1"
 
-    # Build the WHERE part step by step, depending on what the visitor typed
-    conditions = ["p.is_active = 1", "s.status = 'approved'"]
-    params = []
+    def number(name):
+        try:
+            return float(request.args.get(name, ""))
+        except ValueError:
+            return None
+
+    min_price, max_price, min_rating = number("min_price"), number("max_price"), number("min_rating")
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+
+    conditions, params = [], []
     if q:
-        conditions.append("p.product_name LIKE %s")
-        params.append("%" + q + "%")
-    if selected_category in CATEGORIES:
+        conditions.append("(p.product_name LIKE %s OR s.shop_name LIKE %s)")
+        params += ["%" + q + "%", "%" + q + "%"]
+    if category:
         conditions.append("p.category = %s")
-        params.append(selected_category)
-
-    sql = (
-        "SELECT p.product_id, p.product_name, p.category, p.price, p.stock_quantity, "
-        "s.shop_name, "
-        "(SELECT image_path FROM product_images WHERE product_id = p.product_id LIMIT 1), "
-        "(SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.product_id), "
-        "(SELECT COUNT(*) FROM product_reviews WHERE product_id = p.product_id), "
-        "s.seller_id "
-        "FROM products p JOIN sellers s ON s.seller_id = p.seller_id "
-        "WHERE " + " AND ".join(conditions) + " "
-        "ORDER BY p.created_at DESC"
-    )
+        params.append(category)
+    if min_price is not None:
+        conditions.append("p.price >= %s")
+        params.append(min_price)
+    if max_price is not None:
+        conditions.append("p.price <= %s")
+        params.append(max_price)
+    if in_stock:
+        conditions.append("p.stock_quantity > 0")
+    sql = (PRODUCT_SELECT.replace("AND p.stock_quantity > 0 ", "")
+           + "".join(" AND " + c for c in conditions) + " ORDER BY p.created_at DESC LIMIT 500")
 
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(sql, params)
     products = cursor.fetchall()
-
-    # ----- FVRS: rank the sellers for THIS visitor -----
     customer_lat = customer_lon = None
     if "customer_id" in session:
         cursor.execute("SELECT latitude, longitude FROM customers WHERE customer_id = %s",
                        (session["customer_id"],))
-        location = cursor.fetchone()
-        if location and location[0] is not None and location[1] is not None:
-            customer_lat, customer_lon = float(location[0]), float(location[1])
-    ranking = rank_sellers_for_customer(cursor, customer_lat, customer_lon)
-    scores = {r["seller_id"]: r for r in ranking}
-
+        loc = cursor.fetchone()
+        if loc and loc[0] is not None and loc[1] is not None:
+            customer_lat, customer_lon = float(loc[0]), float(loc[1])
+    scores = {r["seller_id"]: r for r in rank_sellers_for_customer(cursor, customer_lat, customer_lon)}
     cursor.close()
     conn.close()
 
-    # Sort: in-stock products first, then by the seller's final FVRS score (highest first).
-    # Python's sort is stable, so equal scores keep the 'newest first' order from SQL.
-    products = sorted(
-        products,
-        key=lambda p: (p[4] <= 0, -scores.get(p[9], {}).get("final_score", 0)),
-    )
+    if min_rating is not None:
+        products = [p for p in products if p[7] is not None and p[7] >= min_rating]
+    if sort == "price_asc":
+        products.sort(key=lambda p: p[3])
+    elif sort == "price_desc":
+        products.sort(key=lambda p: -p[3])
+    elif sort == "rating":
+        products.sort(key=lambda p: (-(float(p[7]) if p[7] is not None else 0), -p[8]))
+    elif sort != "newest":
+        sort = "best"            # fair ranking: in stock first, then the shop's FVRS score
+        products.sort(key=lambda p: (p[4] <= 0, -scores.get(p[9], {}).get("final_score", 0)))
 
-    return render_template("search.html", products=products, q=q,
-                           selected_category=selected_category, categories=CATEGORIES,
-                           scores=scores, show_scores=SHOW_FVRS_ON_CARDS)
+    total = len(products)
+    pages = max(1, -(-total // PER_PAGE))
+    page = min(page, pages)
+    items = products[(page - 1) * PER_PAGE: page * PER_PAGE]
+
+    raw = {"q": q, "category": category, "min_price": request.args.get("min_price", "").strip(),
+           "max_price": request.args.get("max_price", "").strip(),
+           "min_rating": request.args.get("min_rating", "").strip(),
+           "in_stock": "1" if in_stock else "", "sort": sort if sort != "best" else ""}
+    args = {k: v for k, v in raw.items() if v}
+    labels = {"q": '"' + q + '"', "category": category, "min_price": "From Rs " + raw["min_price"],
+              "max_price": "Up to Rs " + raw["max_price"], "min_rating": raw["min_rating"] + " stars and up",
+              "in_stock": "In stock only"}
+    chips = [(labels[k], url_for("search", **{x: y for x, y in args.items() if x != k}))
+             for k in labels if k in args]
+    page_links = [(n, url_for("search", **args, page=n)) for n in range(1, pages + 1)]
+
+    return render_template("search.html", products=items, total=total, q=q, args=args, chips=chips,
+                           categories=CATEGORIES, sort=sort if sort else "best", sort_options=SORT_OPTIONS,
+                           page=page, pages=pages, page_links=page_links, scores=scores,
+                           show_scores=SHOW_FVRS_ON_CARDS)
 
 
 @app.route("/shops")

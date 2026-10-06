@@ -1,18 +1,54 @@
 {% extends "base.html" %}
 {% from "_macros.html" import product_card %}
-{% block title %}Search{% endblock %}
+{% block title %}Browse products{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
-<h1>Browse products</h1>
-<form method="GET" action="/search" class="search-bar">
-  <input type="text" name="q" value="{{ q }}" placeholder="Search products...">
-  <select name="category"><option value="">All categories</option>
-    {% for c in categories %}<option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
-  </select>
-  <button type="submit">Search</button>
-</form>
-<p class="muted">{{ products|length }} product(s){% if q or selected_category %} found. <a href="/search">Clear</a>{% endif %}</p>
-<div class="grid">
-  {% for p in products %}{{ product_card(p, scores, show_scores) }}{% else %}<p>No products found.</p>{% endfor %}
+<form method="GET" action="/search">
+<input type="hidden" name="q" value="{{ q }}">
+<div class="toolbar">
+  <div><h1 style="margin:0">{% if q %}Results for "{{ q }}"{% else %}Browse products{% endif %}</h1>
+    <span class="muted">{{ total }} product{{ '' if total == 1 else 's' }} found</span></div>
+  <div class="tools">
+    <button type="button" id="fbtn" class="small">Filters</button>
+    <select name="sort" onchange="this.form.submit()" aria-label="Sort by">
+      {% for v, l in sort_options %}<option value="{{ v }}" {% if sort == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </div>
 </div>
+{% if chips %}<div class="chips">{% for label, url in chips %}<a class="chip" href="{{ url }}">{{ label }} &times;</a>{% endfor %}<a class="chip clear" href="/search">Clear all</a></div>{% endif %}
+
+<div class="shop-layout">
+  <aside class="filters" id="filters">
+    <h3>Filters</h3>
+    <label>Category</label>
+    <select name="category"><option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c }}" {% if args.get('category') == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+    <label>Price (&#8377;)</label>
+    <div class="pr"><input type="number" name="min_price" min="0" placeholder="Min" value="{{ args.get('min_price', '') }}">
+      <input type="number" name="max_price" min="0" placeholder="Max" value="{{ args.get('max_price', '') }}"></div>
+    <label>Minimum rating</label>
+    <select name="min_rating"><option value="">Any rating</option>
+      <option value="4" {% if args.get('min_rating') == '4' %}selected{% endif %}>4 stars and up</option>
+      <option value="3" {% if args.get('min_rating') == '3' %}selected{% endif %}>3 stars and up</option></select>
+    <label class="chk"><input type="checkbox" name="in_stock" value="1" {% if args.get('in_stock') %}checked{% endif %}> In stock only</label>
+    <button type="submit">Apply filters</button> <a class="cancel" href="/search">Reset</a>
+  </aside>
+
+  <section>
+    {% if products %}
+      <div class="grid">{% for p in products %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div>
+      {% if pages > 1 %}<nav class="pager" aria-label="Pages">
+        {% if page > 1 %}<a href="{{ page_links[page - 2][1] }}">&lsaquo; Prev</a>{% endif %}
+        {% for n, url in page_links %}<a href="{{ url }}" class="{{ 'on' if n == page else '' }}">{{ n }}</a>{% endfor %}
+        {% if page < pages %}<a href="{{ page_links[page][1] }}">Next &rsaquo;</a>{% endif %}
+      </nav>{% endif %}
+    {% else %}
+      <div class="empty"><h2>No products match</h2>
+        <p class="muted">Try removing a filter, checking the spelling, or browse a category.</p>
+        <p>{% for c in categories %}<a class="chip" href="/search?category={{ c|urlencode }}">{{ c }}</a> {% endfor %}</p>
+        <a class="btn" href="/search">Clear all filters</a></div>
+    {% endif %}
+  </section>
+</div>
+</form>
 {% endblock %}
