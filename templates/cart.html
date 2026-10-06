@@ -1,54 +1,33 @@
 {% extends "base.html" %}
-
-{% block title %}My Cart{% endblock %}
+{% block title %}My cart{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>My Cart</h1>
-
+<div class="steps-bar"><span class="on">1 Cart</span><span>2 Address</span><span>3 Done</span></div>
+<h1>My cart</h1>
+{% if grand_total %}
+<div class="cart-layout">
+  <div>
     {% for g in groups %}
-        <h2>From: {{ g.shop_name }}</h2>
-        <table>
-            <tr>
-                <th>Item</th><th>Price</th><th>Quantity</th><th>Total</th><th></th>
-            </tr>
-            {% for item in g['items'] %}
-            <tr>
-                <td>
-                    {% if item.image %}
-                        <img class="thumb" src="{{ url_for('static', filename=item.image) }}" alt="">
-                    {% endif %}
-                    {{ item.name }}
-                </td>
-                <td>&#8377;{{ item.price }}</td>
-                <td>
-                    <form method="POST" action="/cart/update/{{ item.id }}" class="inline">
-                        <input type="number" name="quantity" value="{{ item.qty }}"
-                               min="0" max="{{ item.stock }}" class="stock-input">
-                        <button type="submit" class="small">Update</button>
-                    </form>
-                </td>
-                <td>&#8377;{{ item.line_total }}</td>
-                <td>
-                    <form method="POST" action="/cart/remove/{{ item.id }}" class="inline">
-                        <button type="submit" class="small danger">Remove</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-            <tr>
-                <td colspan="3"><strong>Subtotal for {{ g.shop_name }}</strong></td>
-                <td colspan="2"><strong>&#8377;{{ g.subtotal }}</strong></td>
-            </tr>
-        </table>
-    {% else %}
-        <p>Your cart is empty. <a href="/">Browse products</a></p>
-    {% endfor %}
-
-    {% if grand_total %}
-        <h2>Grand total: &#8377;{{ grand_total }}</h2>
-        <p class="muted">Each shop will deliver as a separate order.</p>
-        <a href="/" class="cancel">Continue shopping</a>
-        <a href="/checkout" class="btn">Proceed to checkout</a>
-    {% endif %}
+    <div class="order-box"><h3>From {{ g.shop_name }}</h3>
+      {% for item in g['items'] %}
+      <div class="crow">
+        {% if item.image %}<img class="thumb" src="{{ url_for('static', filename=item.image) }}" alt="">{% endif %}
+        <div class="cname"><strong>{{ item.name }}</strong><div class="muted">&#8377;{{ item.price }} each</div></div>
+        <form method="POST" action="/cart/update/{{ item.id }}" class="inline">
+          <input type="number" name="quantity" value="{{ item.qty }}" min="0" max="{{ item.stock }}" class="stock-input"> <button class="small">Update</button></form>
+        <strong>&#8377;{{ item.line_total }}</strong>
+        <form method="POST" action="/cart/remove/{{ item.id }}" class="inline"><button class="small danger">Remove</button></form>
+      </div>{% endfor %}
+      <div class="csub">Subtotal: <strong>&#8377;{{ g.subtotal }}</strong></div>
+    </div>{% endfor %}
+  </div>
+  <aside class="summary"><h3>Summary</h3>
+    <div class="srow tot"><span>Total</span><strong>&#8377;{{ grand_total }}</strong></div>
+    <p class="muted">Each shop delivers separately. Pay cash on delivery.</p>
+    <a class="btn" href="/checkout">Proceed to checkout</a>
+    <p><a href="/search">Continue shopping</a></p></aside>
+</div>
+{% else %}
+<div class="empty"><h2>Your cart is empty</h2><p class="muted">Find something from your local shops.</p><a class="btn" href="/search">Browse products</a></div>
+{% endif %}
 {% endblock %}

@@ -1,47 +1,24 @@
 {% extends "base.html" %}
-
-{% block title %}My Orders{% endblock %}
+{% block title %}My orders{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>My Orders</h1>
-
-    {% for o in orders %}
-    <div class="order-box">
-        <div class="order-head">
-            <strong>Order #{{ o.order_id }}</strong> &ndash; {{ o.shop_name }}
-            <span class="badge {{ o.status }}">{{ o.status }}</span>
-        </div>
-        <p class="muted">
-            Placed: {{ o.order_date.strftime('%d %b %Y, %I:%M %p') }}<br>
-            Deliver to: {{ o.delivery_address }}
-            {% if o.delivered_at %}<br>Delivered: {{ o.delivered_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
-        </p>
-        <table>
-            <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
-            {% for item in o['items'] %}
-            <tr>
-                <td>{{ item.product_name }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>&#8377;{{ item.unit_price }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <p><strong>Total: &#8377;{{ o.total_amount }}</strong></p>
-
-        {% if o.status == 'pending' %}
-            <form method="POST" action="/my-orders/{{ o.order_id }}/cancel" class="inline">
-                <button type="submit" class="small danger">Cancel order</button>
-            </form>
-        {% endif %}
-        {% if o.status == 'delivered' %}
-            <a href="/orders/{{ o.order_id }}/review" class="btn">Review order</a>
-        {% endif %}
-        {% if o.status != 'cancelled' %}
-            <a href="/orders/{{ o.order_id }}/complaint" class="cancel">Raise a complaint</a>
-        {% endif %}
-    </div>
-    {% else %}
-        <p>You have not placed any orders yet. <a href="/">Start shopping</a></p>
-    {% endfor %}
+<h1>My orders</h1>
+{% set steps = ['pending', 'accepted', 'packed', 'out_for_delivery', 'delivered'] %}
+{% set labels = {'pending': 'Placed', 'accepted': 'Accepted', 'packed': 'Packed', 'out_for_delivery': 'On the way', 'delivered': 'Delivered'} %}
+{% for o in orders %}
+<div class="order-box">
+  <div class="order-head"><strong>Order #{{ o.order_id }}</strong> &ndash; {{ o.shop_name }} <span class="badge {{ o.status }}">{{ o.status }}</span></div>
+  {% if o.status == 'cancelled' %}<p class="cnote">This order was cancelled.</p>
+  {% else %}{% set idx = steps.index(o.status) %}
+  <ol class="timeline">{% for st in steps %}<li class="{{ 'done' if loop.index0 <= idx else '' }}"><span></span>{{ labels[st] }}</li>{% endfor %}</ol>{% endif %}
+  <p class="muted">Placed: {{ o.order_date.strftime('%d %b %Y, %I:%M %p') }}<br>Deliver to: {{ o.delivery_address }}
+    {% if o.delivered_at %}<br>Delivered: {{ o.delivered_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}</p>
+  <table><tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+    {% for item in o['items'] %}<tr><td>{{ item.product_name }}</td><td>{{ item.quantity }}</td><td>&#8377;{{ item.unit_price }}</td></tr>{% endfor %}</table>
+  <p><strong>Total: &#8377;{{ o.total_amount }}</strong></p>
+  {% if o.status == 'pending' %}<form method="POST" action="/my-orders/{{ o.order_id }}/cancel" class="inline"><button class="small danger">Cancel order</button></form>{% endif %}
+  {% if o.status == 'delivered' %}<a href="/orders/{{ o.order_id }}/review" class="btn">Review order</a>{% endif %}
+  {% if o.status != 'cancelled' %}<a href="/orders/{{ o.order_id }}/complaint" class="cancel">Raise a complaint</a>{% endif %}
+</div>
+{% else %}<div class="empty"><h2>No orders yet</h2><a class="btn" href="/search">Start shopping</a></div>{% endfor %}
 {% endblock %}

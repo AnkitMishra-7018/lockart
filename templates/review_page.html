@@ -1,51 +1,17 @@
 {% extends "base.html" %}
-
 {% block title %}Review order #{{ order.order_id }}{% endblock %}
-
+{% block main_class %}wide page{% endblock %}
+{% macro starpick(uid) %}<div class="starpick">{% for i in [5, 4, 3, 2, 1] %}<input type="radio" name="rating" id="r{{ uid }}_{{ i }}" value="{{ i }}" required><label for="r{{ uid }}_{{ i }}" title="{{ i }} stars">&#9733;</label>{% endfor %}</div>{% endmacro %}
 {% block content %}
-    <p><a href="/my-orders">&larr; Back to my orders</a></p>
-    <h1>Review order #{{ order.order_id }}</h1>
-
-    <h2>Rate the seller: {{ order.shop_name }}</h2>
-    {% if seller_review %}
-        <p>You rated this seller &#9733; {{ seller_review.rating }}/5</p>
-        <p class="muted">{{ seller_review.review_text }}</p>
-    {% else %}
-        <form method="POST" action="/review/seller/{{ order.order_id }}">
-            <label>Rating</label>
-            <select name="rating" required>
-                <option value="">-- choose --</option>
-                {% for i in range(5, 0, -1) %}
-                    <option value="{{ i }}">{{ i }} star{% if i > 1 %}s{% endif %}</option>
-                {% endfor %}
-            </select>
-            <label>Your review (service, packing, delivery)</label>
-            <textarea name="review_text" rows="3"></textarea>
-            <button type="submit">Submit seller review</button>
-        </form>
-    {% endif %}
-
-    <h2>Rate the products</h2>
-    {% for p in products %}
-        <div class="order-box">
-            <strong>{{ p.product_name }}</strong>
-            {% if p.rating %}
-                <p>You rated this product &#9733; {{ p.rating }}/5</p>
-                <p class="muted">{{ p.review_text }}</p>
-            {% else %}
-                <form method="POST" action="/review/product/{{ order.order_id }}/{{ p.product_id }}">
-                    <label>Rating</label>
-                    <select name="rating" required>
-                        <option value="">-- choose --</option>
-                        {% for i in range(5, 0, -1) %}
-                            <option value="{{ i }}">{{ i }} star{% if i > 1 %}s{% endif %}</option>
-                        {% endfor %}
-                    </select>
-                    <label>Your review</label>
-                    <textarea name="review_text" rows="2"></textarea>
-                    <button type="submit">Submit product review</button>
-                </form>
-            {% endif %}
-        </div>
-    {% endfor %}
+<p><a href="/my-orders">&larr; Back to my orders</a></p>
+<h1>Review order #{{ order.order_id }}</h1>
+<div class="box"><h2>Rate the seller: {{ order.shop_name }}</h2>
+  {% if seller_review %}<p>You rated this seller &#9733; {{ seller_review.rating }}/5</p><p class="muted">{{ seller_review.review_text }}</p>
+  {% else %}<form method="POST" action="/review/seller/{{ order.order_id }}">{{ starpick('s') }}
+    <label>Your review (service, packing, delivery)</label><textarea name="review_text" rows="3"></textarea><button type="submit">Submit seller review</button></form>{% endif %}</div>
+<h2>Rate the products</h2>
+{% for p in products %}<div class="box"><strong>{{ p.product_name }}</strong>
+  {% if p.rating %}<p>You rated this product &#9733; {{ p.rating }}/5</p><p class="muted">{{ p.review_text }}</p>
+  {% else %}<form method="POST" action="/review/product/{{ order.order_id }}/{{ p.product_id }}">{{ starpick(p.product_id) }}
+    <label>Your review</label><textarea name="review_text" rows="2"></textarea><button type="submit">Submit product review</button></form>{% endif %}</div>{% endfor %}
 {% endblock %}

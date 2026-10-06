@@ -383,6 +383,62 @@ def about():
     return render_template("about.html", team=team, show_photos=show_photos)
 
 
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    if not customer_logged_in():
+        flash("Please log in as a customer first.", "error")
+        return redirect(url_for("login"))
+    cid = session["customer_id"]
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT full_name, email, phone, address, password_hash FROM customers "
+                   "WHERE customer_id = %s", (cid,))
+    customer = cursor.fetchone()
+
+    if request.method == "POST":
+        if request.form.get("action") == "password":
+            new = request.form.get("new", "")
+            if not check_password_hash(customer["password_hash"], request.form.get("current", "")):
+                flash("Your current password is not correct.", "error")
+            elif len(new) < 6:
+                flash("The new password must be at least 6 characters.", "error")
+            else:
+                cursor.execute("UPDATE customers SET password_hash = %s WHERE customer_id = %s",
+                               (generate_password_hash(new), cid))
+                conn.commit()
+                flash("Password changed.", "success")
+        else:
+            name = request.form.get("full_name", "").strip()
+            phone = request.form.get("phone", "").strip()
+            locality = request.form.get("locality", "")
+            house = request.form.get("house", "").strip()
+            if not name or not phone:
+                flash("Name and phone cannot be empty.", "error")
+            elif locality and (locality not in LOCALITIES or not house):
+                flash("Please add your house/flat details for the chosen colony.", "error")
+            elif locality:
+                lat, lon = LOCALITIES[locality]
+                cursor.execute("UPDATE customers SET full_name=%s, phone=%s, address=%s, latitude=%s, "
+                               "longitude=%s WHERE customer_id=%s",
+                               (name, phone, house + ", " + locality, lat, lon, cid))
+                conn.commit()
+                session["customer_name"] = name
+                flash("Profile updated.", "success")
+            else:
+                cursor.execute("UPDATE customers SET full_name=%s, phone=%s WHERE customer_id=%s",
+                               (name, phone, cid))
+                conn.commit()
+                session["customer_name"] = name
+                flash("Profile updated.", "success")
+        cursor.close()
+        conn.close()
+        return redirect(url_for("profile"))
+
+    cursor.close()
+    conn.close()
+    return render_template("profile.html", customer=customer, localities=LOCALITIES.keys())
+
+
 @app.route("/logout")
 def logout():
     session.clear()

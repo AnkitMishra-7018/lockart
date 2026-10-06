@@ -47,3 +47,14 @@
     });
   });
 })();
+(function () {
+  var c = document.getElementById("confetti"); if (!c) return;
+  var colors = ["#0F6E56", "#EF9F27", "#FAC775", "#5b21b6", "#B83B3B", "#2F8F9D"];
+  for (var n = 0; n < 60; n++) {
+    var p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "%"; p.style.background = colors[n % colors.length];
+    p.style.animationDelay = Math.random() * 1.2 + "s"; p.style.animationDuration = 2.4 + Math.random() * 2 + "s";
+    c.appendChild(p);
+  }
+  setTimeout(function () { c.remove(); }, 6000);
+})();
