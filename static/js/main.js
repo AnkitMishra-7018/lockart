@@ -58,3 +58,12 @@
   }
   setTimeout(function () { c.remove(); }, 6000);
 })();
+(function () {
+  var f = document.getElementById("imgfile"), p = document.getElementById("preview");
+  if (!f || !p) return;
+  f.addEventListener("change", function () {
+    if (!f.files || !f.files[0]) return;
+    var r = new FileReader(); r.onload = function (e) { p.src = e.target.result; p.classList.remove("hidden"); };
+    r.readAsDataURL(f.files[0]);
+  });
+})();

@@ -1,35 +1,22 @@
 {% extends "base.html" %}
-
 {% block title %}{{ title }}{% endblock %}
-
+{% block main_class %}page{% endblock %}
 {% block content %}
-    <h1>{{ title }}</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <label>Product name</label>
-        <input type="text" name="product_name" value="{{ product.product_name }}" required>
-
-        <label>Category</label>
-        <select name="category" required>
-            <option value="">-- choose --</option>
-            {% for c in categories %}
-                <option value="{{ c }}" {% if product.category == c %}selected{% endif %}>{{ c }}</option>
-            {% endfor %}
-        </select>
-
-        <label>Description</label>
-        <textarea name="description" rows="3">{{ product.description }}</textarea>
-
-        <label>Price (&#8377;)</label>
-        <input type="number" name="price" step="0.01" min="0" value="{{ product.price }}" required>
-
-        <label>Stock quantity</label>
-        <input type="number" name="stock_quantity" min="0" value="{{ product.stock_quantity }}" required>
-
-        <label>Product image (png, jpg, gif or webp, max 2 MB)</label>
-        <input type="file" name="image" accept="image/*">
-        <p class="muted">When editing, leave this empty to keep the current image.</p>
-
-        <button type="submit">Save product</button>
-        <a href="/seller/products" class="cancel">Cancel</a>
-    </form>
+<h1>{{ title }}</h1>
+<form method="POST" enctype="multipart/form-data">
+  <label>Product name</label><input type="text" name="product_name" value="{{ product.product_name }}" required>
+  <label>Category</label>
+  <select name="category" required><option value="">-- choose --</option>
+    {% for c in categories %}<option value="{{ c }}" {% if product.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+  <label>Description</label><textarea name="description" rows="3">{{ product.description }}</textarea>
+  <label>Price (&#8377;)</label><input type="number" name="price" step="0.01" min="0" value="{{ product.price }}" required>
+  <label>Stock quantity</label><input type="number" name="stock_quantity" min="0" value="{{ product.stock_quantity }}" required>
+  <label>Product image (png, jpg, gif or webp, max 2 MB)</label>
+  <div class="preview-box">
+    <img id="preview" alt="Image preview" {% if product.image_path %}src="{{ url_for('static', filename=product.image_path) }}"{% else %}class="hidden"{% endif %}>
+    <input id="imgfile" type="file" name="image" accept="image/*">
+  </div>
+  <p class="muted">When editing, leave this empty to keep the current image.</p>
+  <button type="submit">Save product</button> <a href="/seller/products" class="cancel">Cancel</a>
+</form>
 {% endblock %}

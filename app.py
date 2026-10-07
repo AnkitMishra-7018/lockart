@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -660,6 +661,20 @@ def seller_dashboard():
     )
     low_stock = cursor.fetchall()
 
+    # Delivered orders and sales for each of the last 7 days (Indian dates), zero if none
+    cursor.execute(
+        "SELECT DATE(delivered_at) AS d, COUNT(*) AS n, COALESCE(SUM(total_amount), 0) AS sales "
+        "FROM orders WHERE seller_id = %s AND status = 'delivered' "
+        "AND delivered_at >= CURDATE() - INTERVAL 6 DAY GROUP BY DATE(delivered_at)", (seller_id,))
+    found = {row["d"]: row for row in cursor.fetchall()}
+    today = datetime.now(timezone(timedelta(hours=5, minutes=30))).date()
+    daily = []
+    for back in range(6, -1, -1):
+        day = today - timedelta(days=back)
+        row = found.get(day)
+        daily.append({"label": day.strftime("%a"), "orders": int(row["n"]) if row else 0,
+                      "sales": float(row["sales"]) if row else 0.0})
+
     # FVRS piece 1: the 7-day average (the helper expects a normal cursor)
     plain_cursor = conn.cursor()
     ranking = compute_base_scores(plain_cursor)
@@ -674,7 +689,7 @@ def seller_dashboard():
                            order_stats=order_stats, product_count=product_count,
                            rating=rating, pending_complaints=pending_complaints,
                            low_stock=low_stock, avg_orders_7d=avg_orders_7d,
-                           my_fvrs=my_fvrs, my_rank=my_rank, shop_count=len(ranking))
+                           my_fvrs=my_fvrs, my_rank=my_rank, shop_count=len(ranking), daily=daily)
 
 
 # =====================================================
@@ -879,7 +894,8 @@ def seller_edit_product(product_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)   # rows come back as {column_name: value}
     cursor.execute(
-        "SELECT product_id, product_name, category, description, price, stock_quantity "
+        "SELECT product_id, product_name, category, description, price, stock_quantity, "
+        "(SELECT image_path FROM product_images WHERE product_id = products.product_id LIMIT 1) AS image_path "
         "FROM products WHERE product_id = %s AND seller_id = %s",
         (product_id, session["seller_id"]),
     )

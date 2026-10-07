@@ -1,39 +1,42 @@
 {% extends "base.html" %}
-
-{% block title %}Seller Dashboard{% endblock %}
+{% block title %}Seller dashboard{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>{{ shop_name }}</h1>
+{% set mo = (daily|map(attribute='orders')|max) or 1 %}
+{% set ms = (daily|map(attribute='sales')|max) or 1 %}
+<div class="dash-head"><div><h1 style="margin:0">{{ shop_name }}</h1><span class="muted">Seller dashboard</span></div>
+  <div><a class="btn" href="/seller/products/add">+ Add product</a></div></div>
 
-    <div class="stats">
-        <div class="stat"><span>{{ order_stats.current_orders }}</span>Current orders</div>
-        <div class="stat"><span>{{ order_stats.delivered_orders }}</span>Delivered orders</div>
-        <div class="stat"><span>{{ product_count }}</span>Active products</div>
-        <div class="stat">
-            <span>{% if rating.review_count > 0 %}&#9733; {{ rating.avg_rating }}{% else %}New{% endif %}</span>
-            Seller rating {% if rating.review_count > 0 %}({{ rating.review_count }}){% endif %}
-        </div>
-        <div class="stat"><span>&#8377;{{ order_stats.sales_total }}</span>Total sales (delivered)</div>
-    </div>
+{% if order_stats.current_orders|int > 0 or pending_complaints > 0 or low_stock %}
+<div class="alerts">
+  {% if order_stats.current_orders|int > 0 %}<a href="/seller/orders">{{ order_stats.current_orders|int }} order(s) need action</a>{% endif %}
+  {% if pending_complaints > 0 %}<a href="/seller/complaints">{{ pending_complaints }} pending complaint(s)</a>{% endif %}
+  {% if low_stock %}<a href="/seller/products">{{ low_stock|length }} product(s) low on stock</a>{% endif %}
+</div>{% endif %}
 
-    <div class="stats">
-        <div class="stat"><span>{{ order_stats.cancelled_orders }}</span>Cancelled orders</div>
-        <div class="stat"><span>{{ pending_complaints }}</span>Pending complaints</div>
-        <div class="stat"><span>{{ avg_orders_7d }}</span>Avg orders/day (last 7 days)</div>
-        <div class="stat"><span>{% if my_fvrs %}{{ my_fvrs.base_score }}{% else %}&ndash;{% endif %}</span>Visibility score (base, max 90)<br><small>Rank {{ my_rank }} of {{ shop_count }} &ndash; <a href="/seller/visibility">details</a></small></div>
-    </div>
+<div class="stats">
+  <div class="stat"><span>{{ order_stats.current_orders|int }}</span>Current orders</div>
+  <div class="stat"><span>{{ order_stats.delivered_orders|int }}</span>Delivered</div>
+  <div class="stat"><span>&#8377;{{ order_stats.sales_total }}</span>Total sales</div>
+  <div class="stat"><span>{{ product_count }}</span>Active products</div>
+  <div class="stat"><span>{% if rating.review_count > 0 %}&#9733; {{ rating.avg_rating }}{% else %}New{% endif %}</span>Rating</div>
+  <div class="stat"><span>{{ my_fvrs.base_score if my_fvrs else '-' }}</span>Visibility (rank {{ my_rank }} of {{ shop_count }})<br><a href="/seller/visibility">details</a></div>
+</div>
 
-    <h2>Low stock (5 or fewer)</h2>
-    {% if low_stock %}
-        <table>
-            <tr><th>Product</th><th>Stock left</th></tr>
-            {% for p in low_stock %}
-            <tr><td>{{ p.product_name }}</td><td>{{ p.stock_quantity }}</td></tr>
-            {% endfor %}
-        </table>
-        <p><a href="/seller/products">Update stock</a></p>
-    {% else %}
-        <p class="muted">All your products have enough stock.</p>
-    {% endif %}
+<div class="charts">
+  <div class="box reveal"><h3>Orders delivered (last 7 days)</h3>
+    <div class="chart">{% for d in daily %}<div class="col"><em>{{ d.orders }}</em><i style="--h:{{ (d.orders * 100 / mo)|round|int }}%"></i><span>{{ d.label }}</span></div>{% endfor %}</div></div>
+  <div class="box reveal"><h3>Sales in rupees (last 7 days)</h3>
+    <div class="chart alt">{% for d in daily %}<div class="col"><em>{{ d.sales|round|int }}</em><i style="--h:{{ (d.sales * 100 / ms)|round|int }}%"></i><span>{{ d.label }}</span></div>{% endfor %}</div></div>
+</div>
+
+<div class="charts">
+  <div class="box reveal"><h3>Low stock (5 or fewer)</h3>
+    {% if low_stock %}<table><tr><th>Product</th><th>Left</th></tr>{% for p in low_stock %}<tr><td>{{ p.product_name }}</td><td>{{ p.stock_quantity }}</td></tr>{% endfor %}</table>
+      <p><a href="/seller/products">Update stock</a></p>
+    {% else %}<p class="muted">All products have enough stock.</p>{% endif %}</div>
+  <div class="box reveal"><h3>Quick links</h3>
+    <p><a href="/seller/orders">Current orders</a> &middot; <a href="/seller/delivery-groups">Delivery groups</a> &middot; <a href="/seller/reviews">Reviews</a> &middot; <a href="/seller/visibility">Why am I ranked here?</a></p>
+    <p class="muted">Average {{ avg_orders_7d }} delivered orders a day over the last 7 days. Fewer recent orders means more fairness points.</p></div>
+</div>
 {% endblock %}
