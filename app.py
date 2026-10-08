@@ -12,7 +12,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_connection, close_leftover_connections
 from localities import LOCALITIES
 from fvrs import (get_avg_orders_7d, compute_base_scores, save_daily_metrics,
-                  rank_sellers_for_customer, haversine_km)
+                  rank_sellers_for_customer, haversine_km, clear_ranking_cache)
+import seed_demo
+import seed_grouping_demo
 from grouping import group_orders, GROUP_RADIUS_KM, MAX_GROUP_SIZE
 
 app = Flask(__name__)
@@ -1230,6 +1232,7 @@ def admin_seller_action(seller_id, action):
     conn.commit()
     cursor.close()
     conn.close()
+    clear_ranking_cache()                 # the set of approved shops changed, so the ranking must be recalculated
 
     flash("Seller status changed to " + new_status + ".", "success")
     return redirect(url_for("admin_dashboard"))
@@ -2398,6 +2401,57 @@ def admin_fvrs():
     return render_template("admin_fvrs.html", results=results)
 
 
+# =====================================================
+# ADMIN: DEMO TOOLS (for classroom demonstrations)
+# =====================================================
+@app.route("/admin/reset-demo", methods=["POST"])
+def admin_reset_demo():
+    if not admin_logged_in():
+        return redirect(url_for("admin_login"))
+    if request.form.get("confirm", "").strip().upper() != "RESET":
+        flash("Nothing was changed. Type RESET in the box to confirm.", "error")
+        return redirect(url_for("admin_dashboard"))
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        removed = seed_demo.clear_demo(cursor)
+        seed_demo.seed(cursor)
+        conn.commit()
+        flash("Demo data was reset (" + str(removed) + " demo shop(s) rebuilt). Real shops and customers were not touched.", "success")
+    except Exception as error:
+        conn.rollback()
+        print("Demo reset failed:", error)
+        flash("The demo data could not be reset, and nothing was changed.", "error")
+    finally:
+        cursor.close()
+        conn.close()
+    clear_ranking_cache()
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/add-grouping-demo", methods=["POST"])
+def admin_add_grouping_demo():
+    if not admin_logged_in():
+        return redirect(url_for("admin_login"))
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        count = seed_grouping_demo.add_packed_orders(cursor)
+        conn.commit()
+        flash(str(count) + " packed orders were added to Demo Big Mart. Log in as that seller and open Delivery groups.", "success")
+    except ValueError as error:
+        conn.rollback()
+        flash(str(error), "error")
+    except Exception as error:
+        conn.rollback()
+        print("Grouping demo failed:", error)
+        flash("The packed orders could not be added.", "error")
+    finally:
+        cursor.close()
+        conn.close()
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/fvrs/save", methods=["POST"])
 def admin_fvrs_save():
     if not admin_logged_in():
@@ -2730,6 +2784,7 @@ def check_seller_still_approved():
 def refresh_metrics():
     """Recalculates the FVRS numbers and saves today's row for every seller.
     Called automatically when an order is delivered or cancelled."""
+    clear_ranking_cache()
     try:
         conn = get_connection()
         cursor = conn.cursor()

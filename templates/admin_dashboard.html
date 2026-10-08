@@ -44,6 +44,15 @@
     <p><a href="/admin/messages">Open messages</a> &middot; <a href="/admin/customers">Customers</a> &middot; <a href="/admin/orders">Orders</a> &middot; <a href="/admin/complaints">Complaints</a></p></div>
 </div>
 
+<div class="box reveal"><h3>Demo tools</h3>
+  <p class="muted">For classroom demonstrations. Only the four demo shops (<em>demo.*@example.com</em>) are touched. Real shops, customers and orders stay as they are.</p>
+  <form method="POST" action="/admin/add-grouping-demo" class="inline"><button type="submit" class="small">Add 5 packed orders (delivery grouping demo)</button></form>
+  <form method="POST" action="/admin/reset-demo" onsubmit="return confirm('Reset the demo shops and their orders and reviews?')">
+    <label>To reset the demo data, type RESET here</label>
+    <input type="text" name="confirm" autocomplete="off" placeholder="RESET" style="max-width:220px">
+    <button type="submit" class="small danger" style="margin-top:8px">Reset demo data</button></form>
+</div>
+
 <h2 id="sellers">Shops</h2>
 <div class="tools-row">
   <input class="tsearch" data-table="sellers-table" type="search" placeholder="Search shop, owner, email or status..." aria-label="Search shops">

@@ -9,7 +9,7 @@ All demo emails start with "demo." so they are easy to find and remove.
 """
 import random
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from werkzeug.security import generate_password_hash
 
@@ -89,7 +89,7 @@ def get_or_create_demo_customer(cursor):
 
 def seed(cursor):
     random.seed(42)          # same random numbers every run
-    now = datetime.now()
+    now = datetime.now(timezone(timedelta(hours=5, minutes=30))).replace(tzinfo=None)   # Indian time, like the database
     customer_id = get_or_create_demo_customer(cursor)
     c_lat, c_lon = LOCALITIES["Colony A"]
 
@@ -157,20 +157,25 @@ def seed(cursor):
               len(ratings), "reviews")
 
 
-conn = get_connection()
-cursor = conn.cursor()
-try:
-    removed = clear_demo(cursor)
-    print("Removed", removed, "old demo seller(s).")
-    if len(sys.argv) > 1 and sys.argv[1] == "clear":
-        print("Demo data cleared.")
-    else:
-        seed(cursor)
-        print("Done. Demo seller login password:", DEMO_PASSWORD)
-    conn.commit()
-except Exception:
-    conn.rollback()
-    raise
-finally:
-    cursor.close()
-    conn.close()
+def main():
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        removed = clear_demo(cursor)
+        print("Removed", removed, "old demo seller(s).")
+        if len(sys.argv) > 1 and sys.argv[1] == "clear":
+            print("Demo data cleared.")
+        else:
+            seed(cursor)
+            print("Done. Demo seller login password:", DEMO_PASSWORD)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
+if __name__ == "__main__":      # runs only when you start this file yourself, not when app.py imports it
+    main()

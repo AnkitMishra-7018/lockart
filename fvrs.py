@@ -13,6 +13,9 @@ which can reach at most 90. Distance (10%) is added later for each customer.
 """
 
 import math
+import os
+import threading
+import time
 
 WINDOW_DAYS = 7          # rolling window for the average and sales volume
 MAX_DISTANCE_KM = 10     # a shop 10 km or more away gets a distance score of 0
@@ -25,6 +28,21 @@ WEIGHTS = {
     "distance": 0.10,
     "sales": 0.10,
 }
+
+# The public pages (home, search, shop pages) need the ranking on every visit. The numbers only change when an
+# order is delivered/cancelled or a shop is approved, so the base scores are remembered for a few seconds.
+# This changes only HOW OFTEN the scores are recalculated, never HOW they are calculated.
+# Set the environment variable FVRS_CACHE_SECONDS=0 to switch the cache off.
+CACHE_SECONDS = float(os.environ.get("FVRS_CACHE_SECONDS", "15"))
+_cache = {"time": 0.0, "results": None}
+_cache_lock = threading.Lock()
+
+
+def clear_ranking_cache():
+    """Forgets the remembered scores (called when an order or a shop's status changes)."""
+    with _cache_lock:
+        _cache["results"] = None
+
 
 NEUTRAL_RATING = 3.5     # starting rating for a seller with no reviews (cold start)
 PRIOR_WEIGHT = 5         # the neutral rating counts as if it were 5 reviews
@@ -187,6 +205,21 @@ def compute_base_scores(cursor):
     return results
 
 
+def cached_base_scores(cursor):
+    """compute_base_scores(), but reused for CACHE_SECONDS. Always returns fresh copies,
+    because the caller adds distance fields to the dictionaries."""
+    if CACHE_SECONDS > 0:
+        with _cache_lock:
+            if _cache["results"] is not None and time.time() - _cache["time"] < CACHE_SECONDS:
+                return [dict(r) for r in _cache["results"]]
+    results = compute_base_scores(cursor)
+    if CACHE_SECONDS > 0:
+        with _cache_lock:
+            _cache["results"] = [dict(r) for r in results]
+            _cache["time"] = time.time()
+    return results
+
+
 def save_daily_metrics(cursor, results):
     """Saves today's numbers into seller_metrics (one row per seller per day).
     Running it twice on the same day updates the rows instead of duplicating them."""
@@ -250,7 +283,7 @@ def rank_sellers_for_customer(cursor, customer_lat=None, customer_lon=None):
     If the visitor's location is unknown (not logged in), everyone gets the same
     neutral distance score, so the ranking depends only on the base score.
     Returns a list of dictionaries, best seller first."""
-    results = compute_base_scores(cursor)
+    results = cached_base_scores(cursor)
     locations = get_seller_locations(cursor)
     knows_location = customer_lat is not None and customer_lon is not None
 
