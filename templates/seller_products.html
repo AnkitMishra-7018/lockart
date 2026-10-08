@@ -16,7 +16,7 @@
         <tr>
             <td>
                 {% if p[6] %}
-                    <img class="thumb" src="{{ url_for('static', filename=p[6]) }}" alt="">
+                    <img class="thumb" src="{{ img_url(p[6]) }}" alt="">
                 {% endif %}
             </td>
             <td>{{ p[1] }}</td>

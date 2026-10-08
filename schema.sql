@@ -174,3 +174,22 @@ CREATE TABLE seller_metrics (
     UNIQUE (seller_id, metric_date),        -- one row per seller per day
     FOREIGN KEY (seller_id) REFERENCES sellers(seller_id)
 );
+-- ---------- 14. IMAGE_STORE ----------
+-- Seller-uploaded photos are kept here (inside the database), because the
+-- hosting website's own folders are wiped on every restart.
+CREATE TABLE image_store (
+    image_id    INT PRIMARY KEY AUTO_INCREMENT,
+    mime_type   VARCHAR(50) NOT NULL,
+    image_data  MEDIUMBLOB  NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------- 15. WISHLIST ----------
+CREATE TABLE wishlist (
+    customer_id INT NOT NULL,
+    product_id  INT NOT NULL,
+    added_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (customer_id, product_id),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (product_id)  REFERENCES products(product_id)
+);

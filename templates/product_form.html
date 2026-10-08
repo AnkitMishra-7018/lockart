@@ -13,7 +13,7 @@
   <label>Stock quantity</label><input type="number" name="stock_quantity" min="0" value="{{ product.stock_quantity }}" required>
   <label>Product image (png, jpg, gif or webp, max 2 MB)</label>
   <div class="preview-box">
-    <img id="preview" alt="Image preview" {% if product.image_path %}src="{{ url_for('static', filename=product.image_path) }}"{% else %}class="hidden"{% endif %}>
+    <img id="preview" alt="Image preview" {% if product.image_path %}src="{{ img_url(product.image_path) }}"{% else %}class="hidden"{% endif %}>
     <input id="imgfile" type="file" name="image" accept="image/*">
   </div>
   <p class="muted">When editing, leave this empty to keep the current image.</p>

@@ -2,7 +2,7 @@
 {% set sc = scores.get(p[9]) %}
 <a class="card" href="/product/{{ p[0] }}">
   <div class="imgwrap">
-    {% if p[6] %}<img src="{{ url_for('static', filename=p[6]) }}" alt="{{ p[1] }}" loading="lazy">{% else %}<div class="no-img">No image</div>{% endif %}
+    {% if p[6] %}<img src="{{ img_url(p[6]) }}" alt="{{ p[1] }}" loading="lazy">{% else %}<div class="no-img">No image</div>{% endif %}
     <div class="badges">
       {% if p[4] <= 0 %}<span class="bdg out">Out of stock</span>{% endif %}
       {% if sc and sc.is_new %}<span class="bdg new">New shop</span>{% endif %}

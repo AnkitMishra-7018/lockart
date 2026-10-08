@@ -6,7 +6,7 @@
 <nav class="crumbs"><a href="/">Home</a> / <a href="/search?category={{ product.category|urlencode }}">{{ product.category }}</a> / {{ product.product_name }}</nav>
 <div class="pd">
   <div class="gallery">
-    {% for img in images %}<img src="{{ url_for('static', filename=img) }}" alt="{{ product.product_name }}">
+    {% for img in images %}<img src="{{ img_url(img) }}" alt="{{ product.product_name }}">
     {% else %}<div class="no-img big">No image</div>{% endfor %}
   </div>
   <div class="pinfo">

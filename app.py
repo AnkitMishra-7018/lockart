@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from db import get_connection, close_leftover_connections
@@ -38,6 +38,46 @@ CATEGORIES = ["Groceries", "Dairy & Bakery", "Fruits & Vegetables",
 def file_too_large(error):
     flash("That file is too large. Maximum size is 2 MB.", "error")
     return redirect(url_for("seller_products"))
+
+
+# =====================================================
+# IMAGES STORED INSIDE THE DATABASE
+# (the hosting website's own folders are wiped on every restart,
+#  so seller-uploaded photos live in the image_store table instead)
+# =====================================================
+@app.route("/media/<int:image_id>")
+def media(image_id):
+    """Sends one stored image to the browser."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT mime_type, image_data FROM image_store WHERE image_id = %s", (image_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row:
+        abort(404)
+    response = Response(bytes(row[1]), mimetype=row[0])
+    # An image's id never changes (a new upload gets a new id), so browsers may keep it for 30 days.
+    response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    return response
+
+
+@app.template_global()
+def img_url(path):
+    """Turns a stored image path into a web address. Templates call this instead of url_for('static', ...).
+    'db/12'  -> /media/12 (photo kept in the database)
+    'img/..' -> static file in git (demo photos)
+    Old 'uploads/..' files that Render already deleted -> a 'No image' picture."""
+    if not path:
+        return url_for("static", filename="img/no-image.svg")
+    if path.startswith("db/"):
+        try:
+            return url_for("media", image_id=int(path[3:]))
+        except ValueError:
+            return url_for("static", filename="img/no-image.svg")
+    if not os.path.exists(os.path.join(app.root_path, "static", path)):
+        return url_for("static", filename="img/no-image.svg")
+    return url_for("static", filename=path)
 
 
 # =====================================================
@@ -793,16 +833,43 @@ def seller_logged_in():
     return "seller_id" in session
 
 
+IMAGE_MIME = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+              "gif": "image/gif", "webp": "image/webp"}
+
+
+def looks_like_image(data, ext):
+    """Checks the first bytes of the file, so a renamed .exe cannot pass as a .jpg."""
+    if ext == "png":
+        return data.startswith(b"\x89PNG\r\n\x1a\n")
+    if ext in ("jpg", "jpeg"):
+        return data.startswith(b"\xff\xd8\xff")
+    if ext == "gif":
+        return data[:6] in (b"GIF87a", b"GIF89a")
+    if ext == "webp":
+        return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    return False
+
+
 def save_image(file):
-    """Saves an uploaded image. Returns (relative_path, error_message)."""
+    """Saves an uploaded image INSIDE THE DATABASE. Returns (path, error_message).
+    The path looks like 'db/12'. The places that call this function stay unchanged."""
     if file is None or file.filename == "":
         return None, None
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in ALLOWED_EXTENSIONS:
         return None, "Only png, jpg, jpeg, gif or webp images are allowed."
-    filename = uuid.uuid4().hex + "." + ext
-    file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-    return "uploads/" + filename, None
+    data = file.read()
+    if not data or not looks_like_image(data, ext):
+        return None, "That file is not a valid image."
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO image_store (mime_type, image_data) VALUES (%s, %s)",
+                   (IMAGE_MIME[ext], data))
+    image_id = cursor.lastrowid
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return "db/" + str(image_id), None
 
 
 def read_product_form():

@@ -11,7 +11,7 @@
     <div class="order-box"><h3>From {{ g.shop_name }}</h3>
       {% for item in g['items'] %}
       <div class="crow">
-        {% if item.image %}<img class="thumb" src="{{ url_for('static', filename=item.image) }}" alt="">{% endif %}
+        {% if item.image %}<img class="thumb" src="{{ img_url(item.image) }}" alt="">{% endif %}
         <div class="cname"><strong>{{ item.name }}</strong><div class="muted">&#8377;{{ item.price }} each</div></div>
         <form method="POST" action="/cart/update/{{ item.id }}" class="inline">
           <input type="number" name="quantity" value="{{ item.qty }}" min="0" max="{{ item.stock }}" class="stock-input"> <button class="small">Update</button></form>
