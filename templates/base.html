@@ -66,10 +66,14 @@
     <div>
       <a class="logo" href="/"><span>Loc<b>kart</b></span></a>
       <p>Local shops from your neighbourhood, delivered to your door.</p>
+      <form class="nl" method="POST" action="/newsletter">
+        <input type="email" name="email" placeholder="Your email for updates" aria-label="Email for updates" maxlength="100" required>
+        <button type="submit">Subscribe</button>
+      </form>
       <p class="muted" style="color:#9FBFB3">A college mini project. Images are AI-generated for demo purposes.</p>
     </div>
-    <div><h4>Explore</h4><a href="/">Home</a><a href="/shops">Shops near you</a><a href="/about">About Lockart</a></div>
-    <div><h4>Sell and help</h4><a href="/seller/register">Sell with us</a><a href="/seller/login">Seller login</a><a href="/register">Create account</a></div>
+    <div><h4>Explore</h4><a href="/">Home</a><a href="/shops">Shops near you</a><a href="/about">About Lockart</a><a href="/track-order">Track your order</a><a href="/seller/register">Sell with us</a><a href="/seller/login">Seller login</a></div>
+    <div><h4>Help</h4><a href="/faq">FAQ</a><a href="/contact">Contact us</a><a href="/shipping">Shipping and delivery</a><a href="/returns">Returns and refunds</a><a href="/terms">Terms of use</a><a href="/privacy">Privacy policy</a></div>
     <div>
       <h4>Contact</h4>
       <p class="fcredit">Ankit Mishra and team</p>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Track your order{% endblock %}
+{% block main_class %}wide page{% endblock %}
+
+{% block content %}
+<div class="about-hero reveal">
+  <h1>Track your order</h1>
+  <p>Enter your order number and the email you registered with to see where your order is.</p>
+</div>
+
+<form method="POST" class="box track-form reveal">
+  <label>Order number</label>
+  <input type="text" name="order_id" inputmode="numeric" placeholder="For example 15" required>
+
+  <label>Email used for your account</label>
+  <input type="email" name="email" value="{{ email }}" maxlength="100" required>
+
+  <button type="submit">Track order</button>
+  <p class="muted">You can also see all your orders after logging in, under My Orders.</p>
+</form>
+
+{% if order %}
+<div class="box reveal">
+  <h2>Order #{{ order.order_id }} <span class="badge {{ order.status }}">{{ order.status|replace('_', ' ') }}</span></h2>
+  <p class="muted">From {{ order.shop_name }} &middot; placed {{ order.order_date.strftime('%d %b %Y, %I:%M %p') }}
+    {% if order.delivered_at %}&middot; delivered {{ order.delivered_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}</p>
+
+  {% if order.status == 'cancelled' %}
+    <p class="cnote">This order was cancelled.</p>
+  {% else %}
+    <ul class="timeline">
+      {% for label, done in order.steps %}<li class="{{ 'done' if done else '' }}"><span></span>{{ label }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <table class="track-lines">
+    <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+    {% for line in order['lines'] %}
+    <tr><td>{{ line.product_name }}</td><td>{{ line.quantity }}</td><td>&#8377;{{ line.unit_price }}</td></tr>
+    {% endfor %}
+  </table>
+  <p><strong>Total: &#8377;{{ order.total_amount }}</strong> (cash on delivery)</p>
+</div>
+{% endif %}
+{% endblock %}

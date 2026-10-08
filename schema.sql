@@ -1,5 +1,5 @@
 -- ============================================================
--- Local Seller E-Commerce Platform - Database v3 (13 tables)
+-- Local Seller E-Commerce Platform - Database v4 (17 tables)
 -- Requires MySQL 8.0.16 or newer (needed for CHECK rules)
 -- ============================================================
 
@@ -174,6 +174,7 @@ CREATE TABLE seller_metrics (
     UNIQUE (seller_id, metric_date),        -- one row per seller per day
     FOREIGN KEY (seller_id) REFERENCES sellers(seller_id)
 );
+
 -- ---------- 14. IMAGE_STORE ----------
 -- Seller-uploaded photos are kept here (inside the database), because the
 -- hosting website's own folders are wiped on every restart.
@@ -192,4 +193,22 @@ CREATE TABLE wishlist (
     PRIMARY KEY (customer_id, product_id),
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
     FOREIGN KEY (product_id)  REFERENCES products(product_id)
+);
+
+-- ---------- 16. CONTACT_MESSAGES ----------
+-- Messages sent through the Contact page.
+CREATE TABLE contact_messages (
+    message_id   INT PRIMARY KEY AUTO_INCREMENT,
+    full_name    VARCHAR(100) NOT NULL,
+    email        VARCHAR(100) NOT NULL,
+    message_text TEXT NOT NULL,
+    status       ENUM('new','read') NOT NULL DEFAULT 'new',
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------- 17. NEWSLETTER_SUBSCRIBERS ----------
+CREATE TABLE newsletter_subscribers (
+    subscriber_id INT PRIMARY KEY AUTO_INCREMENT,
+    email         VARCHAR(100) NOT NULL UNIQUE,
+    subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

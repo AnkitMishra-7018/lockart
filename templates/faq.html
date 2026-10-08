@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}FAQ{% endblock %}
+{% block main_class %}wide page{% endblock %}
+
+{% block content %}
+<div class="about-hero reveal">
+  <h1>Frequently asked questions</h1>
+  <p>Quick answers about ordering, delivery, fair ranking and selling on Lockart.</p>
+</div>
+
+<div class="faq">
+  {% for question, answer in faqs %}
+  <details class="reveal">
+    <summary>{{ question }}</summary>
+    <p>{{ answer }}</p>
+  </details>
+  {% endfor %}
+</div>
+
+<p class="muted">Cannot find your answer? <a href="/contact">Contact us</a>.</p>
+{% endblock %}

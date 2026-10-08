@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Contact us{% endblock %}
+{% block main_class %}wide page{% endblock %}
+
+{% block content %}
+<div class="about-hero reveal">
+  <h1>Contact us</h1>
+  <p>Questions, feedback or a problem with an order? Send us a message and we will reply by email.</p>
+</div>
+
+<div class="contact-grid">
+  <form method="POST" class="box reveal">
+    <h2>Send a message</h2>
+    <label>Your name</label>
+    <input type="text" name="full_name" value="{{ form.full_name }}" maxlength="100" required>
+
+    <label>Your email</label>
+    <input type="email" name="email" value="{{ form.email }}" maxlength="100" required>
+
+    <label>Message (10 to 1000 characters)</label>
+    <textarea name="message" rows="6" maxlength="1000" required>{{ form.message }}</textarea>
+
+    <div class="hp" aria-hidden="true">
+      <label>Leave this field empty</label>
+      <input type="text" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button type="submit">Send message</button>
+  </form>
+
+  <div class="box reveal">
+    <h2>Other ways to reach us</h2>
+    <p>Ankit Mishra and team</p>
+    {% if contact_email %}<p>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>{% endif %}
+    {% if contact_phone %}<p>Phone: <a href="tel:+{{ contact_phone_digits }}">{{ contact_phone }}</a></p>{% endif %}
+    <p class="muted">Lockart is a college mini project, so replies may take a day or two.</p>
+    <p>Looking for an order? <a href="/track-order">Track your order</a>. Quick answers are in the <a href="/faq">FAQ</a>.</p>
+  </div>
+</div>
+{% endblock %}

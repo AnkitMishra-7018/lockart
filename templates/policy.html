@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main_class %}wide page{% endblock %}
+
+{% block content %}
+<div class="about-hero reveal">
+  <h1>{{ title }}</h1>
+  <p>Lockart is a college mini project. This page explains how the prototype works.</p>
+</div>
+
+<div class="box policy reveal">
+  {% for heading, paragraphs in sections %}
+  <h2>{{ heading }}</h2>
+  {% for text in paragraphs %}<p>{{ text }}</p>{% endfor %}
+  {% endfor %}
+  <p class="muted">Questions? <a href="/contact">Contact us</a>.</p>
+</div>
+{% endblock %}

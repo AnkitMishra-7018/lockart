@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +21,21 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 app.teardown_appcontext(close_leftover_connections)   # always return database connections
+
+# ---------- Contact details (read from environment variables, never typed into the code) ----------
+CONTACT_PHONE = os.environ.get("CONTACT_PHONE", "").strip()
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "").strip()
+_phone_digits = re.sub(r"\D", "", CONTACT_PHONE)
+# 10-digit Indian numbers get the country code 91, so tel: and WhatsApp links work
+CONTACT_PHONE_DIGITS = ("91" + _phone_digits) if len(_phone_digits) == 10 else _phone_digits
+
+# ---------- Team shown on the About page: (name, role, initials, photo file in static/img/team) ----------
+TEAM = [
+    ("Ankit Mishra", "Team Leader", "AM", "ankit.jpg"),
+    ("Amay Kr. Mishra", "Team Member", "AY", "amay.jpg"),
+    ("Aman Pratap Singh", "Team Member", "AP", "aman_pratap.jpg"),
+    ("Aman Kumar", "Team Member", "AK", "aman_kumar.jpg"),
+]
 
 # ---------- Settings for product image uploads ----------
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
@@ -422,6 +438,243 @@ def about():
     team_folder = os.path.join(app.root_path, "static", "img", "team")
     show_photos = all(os.path.exists(os.path.join(team_folder, m["photo"])) for m in team)
     return render_template("about.html", team=team, show_photos=show_photos)
+
+
+# =====================================================
+# INFO PAGES: contact form, newsletter, FAQ, policies, order tracking
+# =====================================================
+_extra_tables_ready = False
+
+
+def ensure_extra_tables():
+    """Creates the contact_messages and newsletter_subscribers tables the first time they are needed
+    (same idea as ensure_wishlist). schema.sql also has them, for a fresh database."""
+    global _extra_tables_ready
+    if _extra_tables_ready:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS contact_messages (message_id INT PRIMARY KEY AUTO_INCREMENT, "
+        "full_name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL, message_text TEXT NOT NULL, "
+        "status ENUM('new','read') NOT NULL DEFAULT 'new', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS newsletter_subscribers (subscriber_id INT PRIMARY KEY AUTO_INCREMENT, "
+        "email VARCHAR(100) NOT NULL UNIQUE, subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    conn.commit()
+    cursor.close()
+    conn.close()
+    _extra_tables_ready = True
+
+
+def valid_email(email):
+    """A simple check: something@something.something, no spaces, at most 100 characters."""
+    return len(email) <= 100 and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) is not None
+
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    form = {"full_name": session.get("customer_name", ""), "email": "", "message": ""}
+    if request.method == "POST":
+        form = {key: request.form.get(key, "").strip() for key in ("full_name", "email", "message")}
+        if request.form.get("website"):
+            # A hidden field that real visitors never see: only spam bots fill it in. Pretend it worked.
+            flash("Thank you! Your message has been sent.", "success")
+            return redirect(url_for("contact"))
+        if not form["full_name"] or len(form["full_name"]) > 100:
+            flash("Please enter your name (up to 100 characters).", "error")
+        elif not valid_email(form["email"]):
+            flash("Please enter a valid email address.", "error")
+        elif len(form["message"]) < 10:
+            flash("Please write a message of at least 10 characters.", "error")
+        elif len(form["message"]) > 1000:
+            flash("Your message is too long. Please keep it under 1000 characters.", "error")
+        else:
+            ensure_extra_tables()
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO contact_messages (full_name, email, message_text) VALUES (%s, %s, %s)",
+                           (form["full_name"], form["email"], form["message"]))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash("Thank you! Your message has been sent. We will get back to you by email.", "success")
+            return redirect(url_for("contact"))
+    return render_template("contact.html", form=form)
+
+
+@app.route("/newsletter", methods=["POST"])
+def newsletter():
+    email = request.form.get("email", "").strip().lower()
+    if not valid_email(email):
+        flash("Please enter a valid email address to subscribe.", "error")
+    else:
+        ensure_extra_tables()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT IGNORE INTO newsletter_subscribers (email) VALUES (%s)", (email,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash("Thanks for subscribing! We will keep you updated.", "success")
+    return redirect(request.referrer or url_for("home"))
+
+
+FAQS = [
+    ("What is Lockart?",
+     "Lockart (Local Kart) is an online marketplace for neighbourhood shops. It is a college mini project, "
+     "so it is a working prototype and not a real store."),
+    ("Do I pay online?",
+     "No. Every order is cash on delivery. There is no payment gateway and no card or bank details are asked."),
+    ("Can I order from more than one shop at once?",
+     "Yes. Your cart can hold items from several shops, but each shop gets its own order and delivers separately."),
+    ("How do I cancel an order?",
+     "Open My Orders and press Cancel. You can cancel only while the order is still pending, "
+     "before the shop has accepted it. The stock goes back to the shop."),
+    ("How do I know where my order is?",
+     "Open My Orders for the live status, or use Track your order with your order number and the email "
+     "you registered with."),
+    ("Why do new shops show up near the top?",
+     "Lockart uses a Fair Visibility Ranking System (FVRS). Shops with fewer recent orders get more visibility, "
+     "and a new shop starts with a fair boost, so small shops are not buried by busy ones."),
+    ("What does the \"New shop\" badge mean?",
+     "The shop has no completed orders and no reviews yet. It is brand new on Lockart."),
+    ("What if my order is late, wrong or damaged?",
+     "After the order is placed, open My Orders and raise a complaint for that order. The admin reviews it "
+     "and marks it resolved or rejected."),
+    ("When can I write a review?",
+     "Only after your order has been delivered. You can review the shop once per order and each product once."),
+    ("How do I sell on Lockart?",
+     "Press Sell with us and register your shop. The admin approves new shops before they appear on the site."),
+    ("What is smart delivery grouping?",
+     "A prototype feature. A seller's packed orders that are going to places within 1 km of each other are "
+     "grouped into one delivery trip. It is a simple method, not a real route planner."),
+    ("Are the product photos real?",
+     "The demo photos are AI-generated for demonstration. Photos uploaded by sellers are shown as uploaded."),
+]
+
+
+@app.route("/faq")
+def faq():
+    return render_template("faq.html", faqs=FAQS)
+
+
+POLICY_PAGES = {
+    "terms": ("Terms of use", [
+        ("About this site",
+         ["Lockart is a college mini project built by a student team. It is a prototype for learning and "
+          "demonstration, not a real store. No real payment or delivery takes place, so please use fake details."]),
+        ("Accounts",
+         ["You are responsible for keeping your password private. Please give correct information when you "
+          "register. Passwords are stored in a scrambled (hashed) form."]),
+        ("Orders",
+         ["Placing an order sends a request to the shop. The shop may accept or cancel it. All orders are "
+          "cash on delivery. A customer can cancel only while the order is pending."]),
+        ("Sellers",
+         ["Shops are approved by the admin before they appear. The admin can block a shop that breaks the rules "
+          "or receives serious complaints. Sellers must describe their products honestly."]),
+        ("Reviews and complaints",
+         ["Reviews can be written only after delivery. Please be honest and respectful. Complaints are "
+          "reviewed by the admin."]),
+        ("Changes",
+         ["These terms may change as the project develops."]),
+    ]),
+    "privacy": ("Privacy policy", [
+        ("What we store",
+         ["Your name, email, phone number, address and colony, your orders, reviews, complaints and wishlist. "
+          "If you write to us or subscribe to updates, we also store the message or email address you give."]),
+        ("Why we store it",
+         ["To run the site: to show you shops near you, deliver your orders and let you review them."]),
+        ("What we do not do",
+         ["We do not take payment details, because every order is cash on delivery. We do not sell your "
+          "information. Your phone number and address are shown only to the shop that is delivering your order."]),
+        ("Cookies",
+         ["Lockart uses one session cookie to keep you logged in and to remember your cart. We do not use "
+          "advertising or tracking cookies."]),
+        ("Your data",
+         ["You can change your name, phone, address and password on your Profile page. To ask for your data "
+          "to be removed, use the Contact page."]),
+        ("A reminder",
+         ["This is a student project. Please do not enter real sensitive information."]),
+    ]),
+    "shipping": ("Shipping and delivery", [
+        ("Who delivers",
+         ["Each shop delivers its own orders. If you order from three shops, you get three separate deliveries."]),
+        ("Where",
+         ["Delivery is available in the colonies listed at checkout. You can use your registered address or "
+          "choose another colony and add your house details."]),
+        ("How long",
+         ["The time depends on the shop. You can follow the status in My Orders: pending, accepted, packed, "
+          "out for delivery and delivered."]),
+        ("Grouped trips",
+         ["A shop may deliver nearby orders together in one trip. This is a prototype feature and does not "
+          "promise a delivery time."]),
+        ("Paying",
+         ["Pay in cash when the order arrives. The total shown at checkout is what you pay."]),
+    ]),
+    "returns": ("Returns and refunds", [
+        ("Cancelling",
+         ["You can cancel an order yourself while it is still pending. After the shop accepts it, "
+          "please contact the shop or raise a complaint."]),
+        ("Wrong, damaged or late orders",
+         ["Open My Orders and raise a complaint for that order, choosing the type of problem. The admin reviews "
+          "it and marks it resolved or rejected. The shop can see the complaint."]),
+        ("Refunds",
+         ["Because every order is cash on delivery, no money is paid online, so there is nothing to refund "
+          "online. Any money-back or replacement is agreed with the shop."]),
+        ("A reminder",
+         ["Lockart is a college prototype, so no real money or goods change hands."]),
+    ]),
+}
+
+
+@app.route("/<page>")
+def policy_page(page):
+    if page not in POLICY_PAGES:
+        abort(404)
+    title, sections = POLICY_PAGES[page]
+    return render_template("policy.html", title=title, sections=sections)
+
+
+TRACK_STEPS = [("pending", "Placed"), ("accepted", "Accepted"), ("packed", "Packed"),
+               ("out_for_delivery", "Out for delivery"), ("delivered", "Delivered")]
+
+
+@app.route("/track-order", methods=["GET", "POST"])
+def track_order():
+    order = None
+    email = ""
+    if request.method == "POST":
+        order_number = request.form.get("order_id", "").strip().lstrip("#")
+        email = request.form.get("email", "").strip().lower()
+        if not order_number.isdigit() or len(order_number) > 9 or not valid_email(email):
+            flash("Please enter your order number (digits only) and the email you registered with.", "error")
+        else:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            # The order number alone is not enough: the email must match the customer who placed the order.
+            cursor.execute(
+                "SELECT o.order_id, o.status, o.order_date, o.total_amount, o.delivered_at, s.shop_name "
+                "FROM orders o JOIN customers c ON c.customer_id = o.customer_id "
+                "JOIN sellers s ON s.seller_id = o.seller_id "
+                "WHERE o.order_id = %s AND LOWER(c.email) = %s",
+                (int(order_number), email))
+            order = cursor.fetchone()
+            if order:
+                cursor.execute(
+                    "SELECT p.product_name, oi.quantity, oi.unit_price FROM order_items oi "
+                    "JOIN products p ON p.product_id = oi.product_id WHERE oi.order_id = %s",
+                    (order["order_id"],))
+                order["lines"] = cursor.fetchall()
+                if order["status"] != "cancelled":
+                    position = [key for key, _ in TRACK_STEPS].index(order["status"])
+                    order["steps"] = [(label, index <= position) for index, (_, label) in enumerate(TRACK_STEPS)]
+            else:
+                # Same message whether the order does not exist or belongs to someone else.
+                flash("We could not find an order with those details. Please check and try again.", "error")
+            cursor.close()
+            conn.close()
+    return render_template("track_order.html", order=order, email=email)
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -1066,7 +1319,10 @@ def customer_logged_in():
 def inject_cart_count():
     """Makes `cart_count` available in every template (used in the top bar)."""
     cart = session.get("cart", {})
-    return {"cart_count": sum(cart.values())}
+    return {"cart_count": sum(cart.values()),
+            "contact_email": CONTACT_EMAIL,
+            "contact_phone": CONTACT_PHONE,
+            "contact_phone_digits": CONTACT_PHONE_DIGITS}
 
 
 @app.route("/cart/add/<int:product_id>", methods=["POST"])
