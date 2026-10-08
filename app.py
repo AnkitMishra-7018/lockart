@@ -2,6 +2,7 @@ import csv
 import io
 import os
 import re
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -38,6 +39,96 @@ TEAM = [
     ("Aman Pratap Singh", "Team Member", "AP", "aman_pratap.jpg"),
     ("Aman Kumar", "Team Member", "AK", "aman_kumar.jpg"),
 ]
+
+
+# =====================================================
+# SECURITY: CSRF PROTECTION AND LOGIN RATE-LIMITING
+# =====================================================
+# CSRF = a bad website tricking your browser into sending a form to Lockart while you are logged in.
+# Defence: every form carries a secret token that only our own pages know, and every POST must send it back.
+def get_csrf_token():
+    """The secret token of this visitor's session (made the first time it is needed)."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
+
+
+@app.before_request
+def check_csrf_token():
+    """Rejects any POST that does not carry this session's secret token."""
+    if request.method != "POST":
+        return None
+    sent = request.form.get("csrf_token", "") or request.headers.get("X-CSRF-Token", "")
+    expected = session.get("csrf_token", "")
+    if expected and sent and secrets.compare_digest(sent.encode(), expected.encode()):
+        return None
+    return render_template("error.html", title="Session expired",
+                           message="Your session has expired or the form was not valid. "
+                                   "Please go back, refresh the page and try again."), 400
+
+
+_FORM_TAG = re.compile(r"<form\b[^>]*>", re.I)
+_POST_METHOD = re.compile(r"""method\s*=\s*["']?post""", re.I)
+
+
+@app.after_request
+def add_csrf_fields(response):
+    """Adds the hidden token field inside every POST form of every page, so no template needs editing."""
+    if response.mimetype != "text/html" or response.direct_passthrough:
+        return response
+    html = response.get_data(as_text=True)
+    if "<form" not in html.lower():
+        return response
+    field = '<input type="hidden" name="csrf_token" value="' + get_csrf_token() + '">'
+    html = _FORM_TAG.sub(lambda m: m.group(0) + field if _POST_METHOD.search(m.group(0)) else m.group(0), html)
+    response.set_data(html)
+    return response
+
+
+# After 5 wrong passwords for the same account, logging in is blocked for 10 minutes.
+# The attempts are kept in the database, so all of the website's workers share the same count.
+LOGIN_MAX_FAILS = 5
+LOGIN_WINDOW_MINUTES = 10
+LOGIN_LOCK_MESSAGE = ("Too many wrong attempts. For safety, login is blocked for "
+                      + str(LOGIN_WINDOW_MINUTES) + " minutes. Please try again later.")
+
+
+def login_key(role, email):
+    return (role + ":" + email)[:150]
+
+
+def login_blocked(role, email):
+    ensure_extra_tables()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM login_attempts WHERE attempt_key = %s "
+                   "AND attempted_at >= NOW() - INTERVAL %s MINUTE",
+                   (login_key(role, email), LOGIN_WINDOW_MINUTES))
+    count = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return count >= LOGIN_MAX_FAILS
+
+
+def record_failed_login(role, email):
+    ensure_extra_tables()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO login_attempts (attempt_key) VALUES (%s)", (login_key(role, email),))
+    cursor.execute("DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL 1 DAY")   # tidy up
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def clear_failed_logins(role, email):
+    ensure_extra_tables()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM login_attempts WHERE attempt_key = %s", (login_key(role, email),))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # ---------- Settings for product image uploads ----------
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
@@ -463,6 +554,10 @@ def ensure_extra_tables():
     cursor.execute(
         "CREATE TABLE IF NOT EXISTS newsletter_subscribers (subscriber_id INT PRIMARY KEY AUTO_INCREMENT, "
         "email VARCHAR(100) NOT NULL UNIQUE, subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS login_attempts (attempt_id INT PRIMARY KEY AUTO_INCREMENT, "
+        "attempt_key VARCHAR(150) NOT NULL, attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+        "INDEX idx_attempt (attempt_key, attempted_at))")
     conn.commit()
     cursor.close()
     conn.close()
@@ -472,6 +567,20 @@ def ensure_extra_tables():
 def valid_email(email):
     """A simple check: something@something.something, no spaces, at most 100 characters."""
     return len(email) <= 100 and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) is not None
+
+
+def password_problem(password):
+    """Returns a message if the password is too weak, otherwise None.
+    Rule: 8 to 128 characters, with at least one letter and one number."""
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if len(password) > 128:
+        return "Password must be at most 128 characters."
+    if not re.search(r"[A-Za-z]", password):
+        return "Password must contain at least one letter."
+    if not re.search(r"\d", password):
+        return "Password must contain at least one number."
+    return None
 
 
 @app.route("/contact", methods=["GET", "POST"])
@@ -694,10 +803,11 @@ def profile():
     if request.method == "POST":
         if request.form.get("action") == "password":
             new = request.form.get("new", "")
+            problem = password_problem(new)
             if not check_password_hash(customer["password_hash"], request.form.get("current", "")):
                 flash("Your current password is not correct.", "error")
-            elif len(new) < 6:
-                flash("The new password must be at least 6 characters.", "error")
+            elif problem:
+                flash("The new password is too weak. " + problem, "error")
             else:
                 cursor.execute("UPDATE customers SET password_hash = %s WHERE customer_id = %s",
                                (generate_password_hash(new), cid))
@@ -755,8 +865,9 @@ def register():
         locality = request.form["locality"]
         house = request.form["address"].strip()
 
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
+        problem = password_problem(password)
+        if problem:
+            flash(problem, "error")
             return render_template("register.html", localities=LOCALITIES.keys())
         if locality not in LOCALITIES:
             flash("Please choose a valid locality.", "error")
@@ -796,6 +907,9 @@ def login():
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         password = request.form["password"]
+        if login_blocked("customer", email):
+            flash(LOGIN_LOCK_MESSAGE, "error")
+            return render_template("login.html")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -808,12 +922,14 @@ def login():
         conn.close()
 
         if row and check_password_hash(row[2], password):
+            clear_failed_logins("customer", email)
             session.clear()                      # forget any earlier login (customer, seller or admin)
             session["customer_id"] = row[0]
             session["customer_name"] = row[1]
             flash("Logged in successfully.", "success")
             return redirect(url_for("home"))
 
+        record_failed_login("customer", email)
         flash("Invalid email or password.", "error")
 
     return render_template("login.html")
@@ -833,8 +949,9 @@ def seller_register():
         locality = request.form["locality"]
         shop_details = request.form["shop_address"].strip()
 
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
+        problem = password_problem(password)
+        if problem:
+            flash(problem, "error")
             return render_template("seller_register.html", localities=LOCALITIES.keys())
         if locality not in LOCALITIES:
             flash("Please choose a valid locality.", "error")
@@ -875,6 +992,9 @@ def seller_login():
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         password = request.form["password"]
+        if login_blocked("seller", email):
+            flash(LOGIN_LOCK_MESSAGE, "error")
+            return render_template("seller_login.html")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -888,8 +1008,10 @@ def seller_login():
 
         # Password is checked first, so strangers can't learn a shop's status
         if not row or not check_password_hash(row[2], password):
+            record_failed_login("seller", email)
             flash("Invalid email or password.", "error")
             return render_template("seller_login.html")
+        clear_failed_logins("seller", email)
 
         status = row[3]
         if status == "pending":
@@ -999,6 +1121,9 @@ def admin_login():
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         password = request.form["password"]
+        if login_blocked("admin", email):
+            flash(LOGIN_LOCK_MESSAGE, "error")
+            return render_template("admin_login.html")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -1011,12 +1136,14 @@ def admin_login():
         conn.close()
 
         if row and check_password_hash(row[2], password):
+            clear_failed_logins("admin", email)
             session.clear()                      # forget any earlier login
             session["admin_id"] = row[0]
             session["admin_name"] = row[1]
             flash("Admin logged in.", "success")
             return redirect(url_for("admin_dashboard"))
 
+        record_failed_login("admin", email)
         flash("Invalid email or password.", "error")
 
     return render_template("admin_login.html")

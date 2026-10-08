@@ -1,5 +1,5 @@
 -- ============================================================
--- Local Seller E-Commerce Platform - Database v4 (17 tables)
+-- Local Seller E-Commerce Platform - Database v5 (18 tables)
 -- Requires MySQL 8.0.16 or newer (needed for CHECK rules)
 -- ============================================================
 
@@ -211,4 +211,13 @@ CREATE TABLE newsletter_subscribers (
     subscriber_id INT PRIMARY KEY AUTO_INCREMENT,
     email         VARCHAR(100) NOT NULL UNIQUE,
     subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------- 18. LOGIN_ATTEMPTS ----------
+-- Wrong-password attempts, used to block a login for 10 minutes after 5 failures.
+CREATE TABLE login_attempts (
+    attempt_id   INT PRIMARY KEY AUTO_INCREMENT,
+    attempt_key  VARCHAR(150) NOT NULL,          -- for example "customer:someone@example.com"
+    attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_attempt (attempt_key, attempted_at)
 );

@@ -215,3 +215,22 @@ a.btn.ghost:hover{background:var(--gl);color:var(--g2)}
 .hb em{font-style:normal;font-weight:700;text-align:right}
 .msgtext{white-space:pre-wrap;word-break:break-word;min-width:220px}
 .badge.new{background:#FFEDD5;color:#9a3412}.badge.read{background:#EEF2F0;color:var(--mu)}
+/* ---- Mobile pass ---- */
+@media(max-width:700px){
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  h1{font-size:1.5rem}h2{font-size:1.2rem}
+  .about-hero{padding:22px}
+  button.small{padding:8px 13px}
+  .tools-row input.tsearch{max-width:none}
+  .dash-head .btn{margin-top:8px}
+}
+@media(max-width:520px){
+  .grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .card img,.no-img{height:120px}.card-body{padding:10px}
+  .stat{min-width:120px;padding:12px}.stat span{font-size:1.4rem}
+  .order-box,.box{padding:14px}
+  .cart-layout .crow{gap:10px}
+  .timeline li{font-size:11px}
+  footer.site{padding-bottom:70px}
+}
+@media(max-width:860px){footer.site{padding-bottom:70px}}
