@@ -1,40 +1,29 @@
 {% extends "base.html" %}
-
 {% block title %}FVRS Scores{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>FVRS &ndash; Base scores</h1>
-    <p class="muted">
-        Base score = 50% fairness + 15% rating + 15% completion + 10% sales (maximum 90).
-        The distance score (10%) is added for each customer when they search.
-    </p>
-
-    <form method="POST" action="/admin/fvrs/save">
-        <button type="submit">Save today's metrics</button>
-    </form>
-
-    <table>
-        <tr>
-            <th>#</th><th>Shop</th><th>Avg orders/day</th><th>Fairness</th>
-            <th>Rating</th><th>Rating score</th><th>Completion</th>
-            <th>Sales (7 days)</th><th>Sales score</th><th>Base score</th>
-        </tr>
-        {% for r in results %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ r.shop_name }}</td>
-            <td>{{ r.avg_orders }}</td>
-            <td>{{ r.fairness_score }}</td>
-            <td>{{ r.rating }} ({{ r.review_count }} reviews)</td>
-            <td>{{ r.rating_score }}</td>
-            <td>{{ r.completion_rate }}%</td>
-            <td>&#8377;{{ r.sales_volume }}</td>
-            <td>{{ r.sales_score }}</td>
-            <td><strong>{{ r.base_score }}</strong></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="10">No approved sellers yet.</td></tr>
-        {% endfor %}
-    </table>
+<div class="dash-head">
+  <div><h1 style="margin:0">FVRS base scores</h1>
+    <span class="muted">Base score = 50% fairness + 15% rating + 15% completion + 10% sales (maximum 90). The distance score (10%) is added for each customer when they search.</span></div>
+  <div><a class="btn ghost" href="/admin/dashboard">Back to dashboard</a></div>
+</div>
+<div class="tools-row">
+  <input class="tsearch" data-table="fvrs-table" type="search" placeholder="Search shop..." aria-label="Search shops">
+  <span class="muted tcount"></span>
+  <form method="POST" action="/admin/fvrs/save" class="inline"><button type="submit">Save today's metrics</button></form>
+</div>
+<div class="tablewrap">
+<table id="fvrs-table">
+  <tr><th>#</th><th>Shop</th><th>Avg orders/day</th><th>Fairness</th><th>Rating</th><th>Rating score</th><th>Completion</th><th>Sales (7 days)</th><th>Sales score</th><th>Base score</th></tr>
+  {% for r in results %}
+  <tr>
+    <td>{{ loop.index }}</td><td>{{ r.shop_name }}</td><td>{{ r.avg_orders }}</td><td>{{ r.fairness_score }}</td>
+    <td>{{ r.rating }} ({{ r.review_count }} reviews)</td><td>{{ r.rating_score }}</td><td>{{ r.completion_rate }}%</td>
+    <td>&#8377;{{ r.sales_volume }}</td><td>{{ r.sales_score }}</td><td><strong>{{ r.base_score }}</strong></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="10">No approved sellers yet.</td></tr>
+  {% endfor %}
+</table>
+</div>
 {% endblock %}

@@ -42,7 +42,7 @@
         <span class="nav-user">{{ session['seller_shop'] }}</span><a href="/logout">Logout</a>
       {% elif session.get('admin_id') %}
         <a href="/admin/dashboard">Dashboard</a><a href="/admin/customers">Customers</a>
-        <a href="/admin/orders">Orders</a><a href="/admin/complaints">Complaints</a><a href="/admin/fvrs">FVRS</a>
+        <a href="/admin/orders">Orders</a><a href="/admin/complaints">Complaints</a><a href="/admin/messages">Messages</a><a href="/admin/fvrs">FVRS</a>
         <span class="nav-user">{{ session['admin_name'] }}</span><a href="/logout">Logout</a>
       {% else %}
         <a href="/shops">Shops</a><a href="/about">About</a><a href="/login">Login</a>

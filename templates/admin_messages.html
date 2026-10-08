@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Messages{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="dash-head">
+  <div><h1 style="margin:0">Messages</h1><span class="muted">Sent through the Contact page, and newsletter sign-ups</span></div>
+  <div><a class="btn ghost" href="/admin/dashboard">Back to dashboard</a></div>
+</div>
+
+<h2>Contact messages</h2>
+<div class="tools-row">
+  <input class="tsearch" data-table="messages-table" type="search" placeholder="Search name, email or message..." aria-label="Search messages">
+  <span class="muted tcount"></span>
+  <a class="btn" href="/admin/export/messages.csv">Download CSV</a>
+</div>
+<div class="tablewrap">
+<table id="messages-table">
+  <tr><th>Date</th><th>Name</th><th>Email</th><th>Message</th><th>Status</th><th>Action</th></tr>
+  {% for m in messages %}
+  <tr>
+    <td>{{ m.created_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+    <td>{{ m.full_name }}</td>
+    <td><a href="mailto:{{ m.email }}">{{ m.email }}</a></td>
+    <td class="msgtext">{{ m.message_text }}</td>
+    <td><span class="badge {{ m.status }}">{{ m.status }}</span></td>
+    <td>{% if m.status == 'new' %}
+      <form method="POST" action="/admin/messages/{{ m.message_id }}/read" class="inline"><button type="submit" class="small">Mark read</button></form>
+    {% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No messages yet.</td></tr>
+  {% endfor %}
+</table>
+</div>
+
+<h2>Newsletter subscribers</h2>
+<div class="tools-row">
+  <input class="tsearch" data-table="subscribers-table" type="search" placeholder="Search email..." aria-label="Search subscribers">
+  <span class="muted tcount"></span>
+  <a class="btn" href="/admin/export/subscribers.csv">Download CSV</a>
+</div>
+<div class="tablewrap">
+<table id="subscribers-table">
+  <tr><th>Email</th><th>Subscribed</th></tr>
+  {% for s in subscribers %}
+  <tr><td>{{ s.email }}</td><td>{{ s.subscribed_at.strftime('%d %b %Y') }}</td></tr>
+  {% else %}
+  <tr><td colspan="2">No subscribers yet.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

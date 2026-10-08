@@ -1,25 +1,27 @@
 {% extends "base.html" %}
-
 {% block title %}All Customers{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>All Customers</h1>
-    <table>
-        <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th>
-            <th>Orders</th><th>Joined</th></tr>
-        {% for c in customers %}
-        <tr>
-            <td>{{ c.customer_id }}</td>
-            <td>{{ c.full_name }}</td>
-            <td>{{ c.email }}</td>
-            <td>{{ c.phone }}</td>
-            <td>{{ c.address }}</td>
-            <td>{{ c.order_count }}</td>
-            <td>{{ c.created_at.strftime('%d %b %Y') }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7">No customers yet.</td></tr>
-        {% endfor %}
-    </table>
+<div class="dash-head">
+  <div><h1 style="margin:0">Customers</h1><span class="muted">{{ customers|length }} registered</span></div>
+  <div><a class="btn ghost" href="/admin/dashboard">Back to dashboard</a></div>
+</div>
+<div class="tools-row">
+  <input class="tsearch" data-table="customers-table" type="search" placeholder="Search name, email, phone or address..." aria-label="Search customers">
+  <span class="muted tcount"></span>
+  <a class="btn" href="/admin/export/customers.csv">Download CSV</a>
+</div>
+<div class="tablewrap">
+<table id="customers-table">
+  <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Orders</th><th>Joined</th></tr>
+  {% for c in customers %}
+  <tr>
+    <td>{{ c.customer_id }}</td><td>{{ c.full_name }}</td><td>{{ c.email }}</td><td>{{ c.phone }}</td>
+    <td>{{ c.address }}</td><td>{{ c.order_count }}</td><td>{{ c.created_at.strftime('%d %b %Y') }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7">No customers yet.</td></tr>
+  {% endfor %}
+</table>
+</div>
 {% endblock %}

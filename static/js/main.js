@@ -67,3 +67,21 @@
     r.readAsDataURL(f.files[0]);
   });
 })();
+(function () {
+  document.querySelectorAll(".tsearch").forEach(function (box) {
+    var table = document.getElementById(box.dataset.table); if (!table) return;
+    var counter = box.parentNode.querySelector(".tcount");
+    var rows = [].filter.call(table.querySelectorAll("tr"), function (tr) {
+      return !tr.querySelector("th") && !tr.querySelector("td[colspan]");
+    });
+    function update() {
+      var q = box.value.trim().toLowerCase(), shown = 0;
+      rows.forEach(function (tr) {
+        var hit = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
+        tr.style.display = hit ? "" : "none"; if (hit) shown++;
+      });
+      if (counter) counter.textContent = shown + " of " + rows.length + " shown";
+    }
+    box.addEventListener("input", update); update();
+  });
+})();

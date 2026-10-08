@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import re
 import uuid
@@ -1026,6 +1028,7 @@ def admin_dashboard():
         flash("Please log in as admin first.", "error")
         return redirect(url_for("admin_login"))
 
+    ensure_extra_tables()
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -1038,8 +1041,14 @@ def admin_dashboard():
     stats["pending_sellers"] = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM orders")
     stats["orders"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE status = 'delivered'")
+    stats["sales"] = float(cursor.fetchone()[0])
     cursor.execute("SELECT COUNT(*) FROM complaints WHERE status = 'pending'")
     stats["pending_complaints"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM contact_messages WHERE status = 'new'")
+    stats["new_messages"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM newsletter_subscribers")
+    stats["subscribers"] = cursor.fetchone()[0]
 
     # Pending sellers first, then approved, then blocked
     cursor.execute(
@@ -1048,9 +1057,29 @@ def admin_dashboard():
     )
     sellers = cursor.fetchall()
 
+    # Whole-platform delivered orders and sales for each of the last 7 days (Indian dates), zero if none
+    cursor.execute(
+        "SELECT DATE(delivered_at), COUNT(*), COALESCE(SUM(total_amount), 0) "
+        "FROM orders WHERE status = 'delivered' AND delivered_at >= CURDATE() - INTERVAL 6 DAY "
+        "GROUP BY DATE(delivered_at)")
+    found = {row[0]: row for row in cursor.fetchall()}
+    today = datetime.now(timezone(timedelta(hours=5, minutes=30))).date()
+    daily = []
+    for back in range(6, -1, -1):
+        day = today - timedelta(days=back)
+        row = found.get(day)
+        daily.append({"label": day.strftime("%a"), "orders": int(row[1]) if row else 0,
+                      "sales": float(row[2]) if row else 0.0})
+
+    # FVRS base score of the top shops (the same numbers as the FVRS page; the maximum is 90)
+    ranking = compute_base_scores(cursor)
+    fvrs_bars = [{"shop_name": r["shop_name"], "base_score": r["base_score"],
+                  "width": round(r["base_score"] / 90 * 100)} for r in ranking[:8]]
+
     cursor.close()
     conn.close()
-    return render_template("admin_dashboard.html", stats=stats, sellers=sellers)
+    return render_template("admin_dashboard.html", stats=stats, sellers=sellers,
+                           daily=daily, fvrs_bars=fvrs_bars)
 
 
 @app.route("/admin/seller/<int:seller_id>/<action>", methods=["POST"])
@@ -2256,6 +2285,122 @@ def admin_fvrs_save():
     conn.close()
     flash("Saved today's metrics for " + str(len(results)) + " seller(s).", "success")
     return redirect(url_for("admin_fvrs"))
+
+
+# =====================================================
+# ADMIN: MESSAGES (contact form + newsletter) AND CSV EXPORT
+# =====================================================
+@app.route("/admin/messages")
+def admin_messages():
+    if not admin_logged_in():
+        flash("Please log in as admin first.", "error")
+        return redirect(url_for("admin_login"))
+    ensure_extra_tables()
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT message_id, full_name, email, message_text, status, created_at "
+                   "FROM contact_messages ORDER BY FIELD(status, 'new', 'read'), created_at DESC")
+    messages = cursor.fetchall()
+    cursor.execute("SELECT email, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC")
+    subscribers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("admin_messages.html", messages=messages, subscribers=subscribers)
+
+
+@app.route("/admin/messages/<int:message_id>/read", methods=["POST"])
+def admin_message_read(message_id):
+    if not admin_logged_in():
+        return redirect(url_for("admin_login"))
+    ensure_extra_tables()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE contact_messages SET status = 'read' WHERE message_id = %s", (message_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("admin_messages"))
+
+
+def csv_safe(value):
+    """Text for a CSV cell. A cell starting with = + - or @ could run as a formula when opened in
+    Excel, so a quote mark is put in front of it."""
+    text = "" if value is None else str(value)
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        text = "'" + text
+    return text
+
+
+def csv_download(filename, header, rows):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(header)
+    for row in rows:
+        writer.writerow([csv_safe(value) for value in row])
+    # The leading \ufeff makes Excel read the file as UTF-8 (so the rupee sign and Hindi names look right)
+    response = Response("\ufeff" + buffer.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=" + filename
+    return response
+
+
+def stamp(value):
+    return value.strftime("%Y-%m-%d %H:%M") if value else ""
+
+
+@app.route("/admin/export/<kind>.csv")
+def admin_export(kind):
+    if not admin_logged_in():
+        flash("Please log in as admin first.", "error")
+        return redirect(url_for("admin_login"))
+
+    if kind == "orders":
+        rows = []
+        for o in fetch_orders("1 = 1", ()):
+            items = "; ".join(i["product_name"] + " x " + str(i["quantity"]) for i in o["items"])
+            rows.append([o["order_id"], stamp(o["order_date"]), o["customer_name"], o["shop_name"],
+                         items, o["total_amount"], o["status"], stamp(o["delivered_at"])])
+        return csv_download("lockart_orders.csv",
+                            ["Order", "Placed", "Customer", "Shop", "Items", "Total (Rs)", "Status", "Delivered"], rows)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    if kind == "customers":
+        cursor.execute(
+            "SELECT c.customer_id, c.full_name, c.email, c.phone, c.address, c.created_at, "
+            "(SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.customer_id) "
+            "FROM customers c ORDER BY c.created_at DESC")
+        rows = [[r[0], r[1], r[2], r[3], r[4], r[6], stamp(r[5])] for r in cursor.fetchall()]
+        header = ["ID", "Name", "Email", "Phone", "Address", "Orders", "Joined"]
+        filename = "lockart_customers.csv"
+    elif kind == "complaints":
+        cursor.execute(
+            "SELECT cp.complaint_id, cp.complaint_date, cp.order_id, c.full_name, s.shop_name, "
+            "cp.complaint_type, cp.complaint_text, cp.status "
+            "FROM complaints cp JOIN customers c ON c.customer_id = cp.customer_id "
+            "JOIN sellers s ON s.seller_id = cp.seller_id ORDER BY cp.complaint_date DESC")
+        rows = [[r[0], stamp(r[1]), r[2], r[3], r[4], r[5].replace("_", " "), r[6], r[7]] for r in cursor.fetchall()]
+        header = ["ID", "Date", "Order", "Customer", "Shop", "Type", "Details", "Status"]
+        filename = "lockart_complaints.csv"
+    elif kind == "messages":
+        ensure_extra_tables()
+        cursor.execute("SELECT message_id, created_at, full_name, email, message_text, status "
+                       "FROM contact_messages ORDER BY created_at DESC")
+        rows = [[r[0], stamp(r[1]), r[2], r[3], r[4], r[5]] for r in cursor.fetchall()]
+        header = ["ID", "Date", "Name", "Email", "Message", "Status"]
+        filename = "lockart_messages.csv"
+    elif kind == "subscribers":
+        ensure_extra_tables()
+        cursor.execute("SELECT email, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC")
+        rows = [[r[0], stamp(r[1])] for r in cursor.fetchall()]
+        header = ["Email", "Subscribed"]
+        filename = "lockart_subscribers.csv"
+    else:
+        cursor.close()
+        conn.close()
+        abort(404)
+    cursor.close()
+    conn.close()
+    return csv_download(filename, header, rows)
 
 
 # =====================================================

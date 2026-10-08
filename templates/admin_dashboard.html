@@ -1,46 +1,73 @@
 {% extends "base.html" %}
-
 {% block title %}Admin Dashboard{% endblock %}
 {% block main_class %}wide{% endblock %}
-
 {% block content %}
-    <h1>Admin Dashboard</h1>
+{% set mo = (daily|map(attribute='orders')|max) or 1 %}
+{% set ms = (daily|map(attribute='sales')|max) or 1 %}
+<div class="dash-head">
+  <div><h1 style="margin:0">Admin dashboard</h1><span class="muted">Welcome, {{ session['admin_name'] }}</span></div>
+  <div><a class="btn ghost" href="/admin/fvrs">FVRS scores</a> <a class="btn" href="/admin/messages">Messages</a></div>
+</div>
 
-    <div class="stats">
-        <div class="stat"><span>{{ stats.customers }}</span>Customers</div>
-        <div class="stat"><span>{{ stats.sellers }}</span>Sellers</div>
-        <div class="stat"><span>{{ stats.pending_sellers }}</span>Pending approvals</div>
-        <div class="stat"><span>{{ stats.orders }}</span>Orders</div>
-        <div class="stat"><span>{{ stats.pending_complaints }}</span>Pending complaints</div>
-    </div>
+{% if stats.pending_sellers > 0 or stats.pending_complaints > 0 or stats.new_messages > 0 %}
+<div class="alerts">
+  {% if stats.pending_sellers > 0 %}<a href="#sellers">{{ stats.pending_sellers }} shop(s) waiting for approval</a>{% endif %}
+  {% if stats.pending_complaints > 0 %}<a href="/admin/complaints">{{ stats.pending_complaints }} pending complaint(s)</a>{% endif %}
+  {% if stats.new_messages > 0 %}<a href="/admin/messages">{{ stats.new_messages }} new message(s)</a>{% endif %}
+</div>
+{% endif %}
 
-    <h2>Sellers</h2>
-    <table>
-        <tr>
-            <th>ID</th><th>Shop</th><th>Owner</th><th>Email</th><th>Status</th><th>Action</th>
-        </tr>
-        {% for s in sellers %}
-        <tr>
-            <td>{{ s[0] }}</td>
-            <td>{{ s[1] }}</td>
-            <td>{{ s[2] }}</td>
-            <td>{{ s[3] }}</td>
-            <td><span class="badge {{ s[4] }}">{{ s[4] }}</span></td>
-            <td>
-                {% if s[4] != 'approved' %}
-                <form method="POST" action="/admin/seller/{{ s[0] }}/approve" class="inline">
-                    <button type="submit" class="small">Approve</button>
-                </form>
-                {% endif %}
-                {% if s[4] != 'blocked' %}
-                <form method="POST" action="/admin/seller/{{ s[0] }}/block" class="inline">
-                    <button type="submit" class="small danger">Block</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6">No sellers have registered yet.</td></tr>
-        {% endfor %}
-    </table>
+<div class="stats">
+  <div class="stat"><span>{{ stats.customers }}</span>Customers</div>
+  <div class="stat"><span>{{ stats.sellers }}</span>Shops</div>
+  <div class="stat"><span>{{ stats.pending_sellers }}</span>Pending approvals</div>
+  <div class="stat"><span>{{ stats.orders }}</span>Orders</div>
+  <div class="stat"><span>&#8377;{{ stats.sales|round|int }}</span>Delivered sales</div>
+  <div class="stat"><span>{{ stats.pending_complaints }}</span>Pending complaints</div>
+</div>
+
+<div class="charts">
+  <div class="box reveal"><h3>Orders delivered, all shops (last 7 days)</h3>
+    <div class="chart">{% for d in daily %}<div class="col"><em>{{ d.orders }}</em><i style="--h:{{ (d.orders * 100 / mo)|round|int }}%"></i><span>{{ d.label }}</span></div>{% endfor %}</div></div>
+  <div class="box reveal"><h3>Sales in rupees, all shops (last 7 days)</h3>
+    <div class="chart alt">{% for d in daily %}<div class="col"><em>{{ d.sales|round|int }}</em><i style="--h:{{ (d.sales * 100 / ms)|round|int }}%"></i><span>{{ d.label }}</span></div>{% endfor %}</div></div>
+</div>
+
+<div class="charts">
+  <div class="box reveal"><h3>FVRS base score by shop (maximum 90)</h3>
+    {% for r in fvrs_bars %}<div class="hb"><b>{{ r.shop_name }}</b><div><i style="--w:{{ r.width }}%"></i></div><em>{{ r.base_score }}</em></div>
+    {% else %}<p class="muted">No approved shops yet.</p>{% endfor %}
+    <p><a href="/admin/fvrs">Full score table</a></p></div>
+  <div class="box reveal"><h3>Inbox</h3>
+    <p><strong>{{ stats.new_messages }}</strong> new message(s) from the Contact page.</p>
+    <p><strong>{{ stats.subscribers }}</strong> newsletter subscriber(s).</p>
+    <p><a href="/admin/messages">Open messages</a> &middot; <a href="/admin/customers">Customers</a> &middot; <a href="/admin/orders">Orders</a> &middot; <a href="/admin/complaints">Complaints</a></p></div>
+</div>
+
+<h2 id="sellers">Shops</h2>
+<div class="tools-row">
+  <input class="tsearch" data-table="sellers-table" type="search" placeholder="Search shop, owner, email or status..." aria-label="Search shops">
+  <span class="muted tcount"></span>
+</div>
+<div class="tablewrap">
+<table id="sellers-table">
+  <tr><th>ID</th><th>Shop</th><th>Owner</th><th>Email</th><th>Status</th><th>Action</th></tr>
+  {% for s in sellers %}
+  <tr>
+    <td>{{ s[0] }}</td><td>{{ s[1] }}</td><td>{{ s[2] }}</td><td>{{ s[3] }}</td>
+    <td><span class="badge {{ s[4] }}">{{ s[4] }}</span></td>
+    <td>
+      {% if s[4] != 'approved' %}
+      <form method="POST" action="/admin/seller/{{ s[0] }}/approve" class="inline"><button type="submit" class="small">Approve</button></form>
+      {% endif %}
+      {% if s[4] != 'blocked' %}
+      <form method="POST" action="/admin/seller/{{ s[0] }}/block" class="inline"><button type="submit" class="small danger">Block</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No shops have registered yet.</td></tr>
+  {% endfor %}
+</table>
+</div>
 {% endblock %}
