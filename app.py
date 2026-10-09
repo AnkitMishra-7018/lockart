@@ -39,10 +39,57 @@ CONTACT_PHONE_DIGITS = ("91" + _phone_digits) if len(_phone_digits) == 10 else _
 
 # ---------- Team shown on the About page: (name, role, initials, photo file in static/img/team) ----------
 TEAM = [
-    ("Ankit Mishra", "Team Leader", "AM", "ankit.jpg"),
-    ("Amay Kr. Mishra", "Team Member", "AY", "amay.jpg"),
-    ("Aman Pratap Singh", "Team Member", "AP", "aman_pratap.jpg"),
-    ("Aman Kumar", "Team Member", "AK", "aman_kumar.jpg"),
+    # Each card shows: role, name, tagline, tags, responsibilities and what the person presents in the viva.
+    # Change any text so it matches what that person REALLY did. An examiner may ask each member about it.
+    # c1 and c2 are the two colours of that person's card.
+    {"name": "Ankit Mishra", "role": "Team Leader and Lead Developer", "initials": "AM", "photo": "ankit.jpg",
+     "tagline": "From idea to live website.",
+     "tags": ["Leadership", "Team guidance", "Python", "Flask", "MySQL", "FVRS algorithm", "HTML, CSS and JavaScript",
+              "Git and GitHub", "Deployment", "Testing", "Report writing", "Presenting"],
+     "contributions": [
+         "Led the team, planned the schedule and guided every member",
+         "Built the website: Flask backend, MySQL database and the FVRS ranking",
+         "Tested the features and put the live site online (Render and Aiven)",
+         "Prepared the project report and the presentation",
+         "Main presenter of the project",
+     ],
+     "presents": "Overview, the FVRS ranking and the live demo",
+     "c1": "#0F6E56", "c2": "#0B4F3F"},
+    {"name": "Amay Kr. Mishra", "role": "Testing and Quality Lead", "initials": "AY", "photo": "amay.jpg",
+     "tagline": "If it can break, he finds it first.",
+     "tags": ["Testing", "Test planning", "Test cases", "Bug reporting", "Re-testing", "Usability checks",
+              "Mobile and browser checks", "Test data", "Presenting"],
+     "contributions": [
+         "Tested the customer, seller and admin features step by step",
+         "Reported bugs and tested again after each fix",
+         "Prepared the test cases and results for the report",
+         "Checked the site on phones and different browsers",
+     ],
+     "presents": "The customer shopping demo",
+     "c1": "#B8650A", "c2": "#8A4A06"},
+    {"name": "Aman Kumar", "role": "Project Report Lead", "initials": "AK", "photo": "aman_kumar.jpg",
+     "tagline": "Turns the work into a clear story.",
+     "tags": ["Report writing", "Documentation", "Requirement analysis", "Research", "Screenshots and results",
+              "Proofreading", "User manual", "Presenting"],
+     "contributions": [
+         "Wrote and organised the project report",
+         "Prepared the introduction, problem statement and objectives",
+         "Collected the screenshots and results for every chapter",
+         "Proofread the report and the presentation",
+     ],
+     "presents": "Introduction, problem and objectives",
+     "c1": "#5B21B6", "c2": "#3B1478"},
+    {"name": "Aman Pratap Singh", "role": "Design and Diagrams Lead", "initials": "AP", "photo": "aman_pratap.jpg",
+     "tagline": "Makes the system easy to see.",
+     "tags": ["Diagrams", "Database design", "Slide design", "Presentation", "UI review", "Presenting"],
+     "contributions": [
+         "Prepared the ER, use-case, data-flow and architecture diagrams",
+         "Prepared the presentation slides",
+         "Reviewed the pages for looks, spelling and ease of use",
+         "Helped explain the database design",
+     ],
+     "presents": "Database design and system architecture",
+     "c1": "#1F7A8C", "c2": "#14566A"},
 ]
 
 
@@ -531,11 +578,14 @@ def wishlist_toggle(product_id):
 
 @app.route("/about")
 def about():
-    team = [{"name": n, "role": r, "initials": i, "photo": p} for n, r, i, p in TEAM]
-    # Photos are shown only when all four exist, so the page never mixes photos and initials
     team_folder = os.path.join(app.root_path, "static", "img", "team")
-    show_photos = all(os.path.exists(os.path.join(team_folder, m["photo"])) for m in team)
-    return render_template("about.html", team=team, show_photos=show_photos)
+    team = []
+    for member in TEAM:
+        item = dict(member)
+        # each person shows their photo if the file exists, otherwise their initials
+        item["has_photo"] = os.path.exists(os.path.join(team_folder, member["photo"]))
+        team.append(item)
+    return render_template("about.html", team=team)
 
 
 # =====================================================

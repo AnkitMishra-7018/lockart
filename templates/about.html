@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block title %}About{% endblock %}
-{% block main_class %}wide page{% endblock %}
+{% block main_class %}wide{% endblock %}
 
 {% block content %}
-<div class="about-hero reveal">
-  <h1>About Lockart</h1>
-  <p>Lockart (Local Kart) is an online marketplace that brings small neighbourhood shops into e-commerce, and gives new and small sellers a fair chance to be seen.</p>
+<section class="bigabout reveal">
+  <h1>The team behind Lockart</h1>
+  <p>Lockart (Local Kart) brings small neighbourhood shops into e-commerce and gives new and small sellers a fair chance to be seen.</p>
+</section>
+
+<div class="facts reveal">
+  <div class="fact"><b class="count" data-to="4">4</b><span>team members</span></div>
+  <div class="fact"><b class="count" data-to="3">3</b><span>user roles: customer, seller, admin</span></div>
+  <div class="fact"><b class="count" data-to="5">5</b><span>factors in the FVRS ranking</span></div>
+  <div class="fact"><b class="count" data-to="18">18</b><span>database tables</span></div>
 </div>
 
 <div class="box reveal">
@@ -14,22 +21,46 @@
   <p class="muted">What makes it different: a Fair Visibility Ranking System (FVRS) that uses each shop's recent orders, rating, completion rate, distance and sales, gives new shops a fair start, and groups nearby orders into one delivery trip.</p>
 </div>
 
-<h2 class="reveal">Meet the team</h2>
-<div class="team">
-  {% for m in team %}
-  <div class="member reveal {% if loop.first %}lead{% endif %}">
-    {% if show_photos %}<img class="avatar" src="{{ url_for('static', filename='img/team/' + m.photo) }}" alt="{{ m.name }}">
-    {% else %}<div class="avatar">{{ m.initials }}</div>{% endif %}
-    <strong>{{ m.name }}</strong>
-    <div class="role">{{ m.role }}</div>
+<h2 class="reveal" style="margin-top:30px">Meet the team</h2>
+<p class="sec-sub reveal">The four students who designed, built and tested Lockart.</p>
+
+{% for m in team %}
+<article class="person {{ 'flip' if loop.index is even else '' }} {{ 'lead' if loop.first else '' }} reveal" style="--c1:{{ m.c1 }};--c2:{{ m.c2 }}">
+  <div class="pphoto-wrap">
+    <div class="pphoto {{ 'has-img' if m.has_photo else '' }}">{% if m.has_photo %}<img src="{{ url_for('static', filename='img/team/' + m.photo) }}" alt="{{ m.name }}" loading="lazy">{% else %}<span>{{ m.initials }}</span>{% endif %}</div>
   </div>
-  {% endfor %}
+  <div class="ptext">
+    <span class="prole">{% if loop.first %}&#9733; {% endif %}{{ m.role }}</span>
+    <h3>{{ m.name }}</h3>
+    {% if m.tagline %}<p class="ptag">{{ m.tagline }}</p>{% endif %}
+    {% if m.tags %}<div class="ptags">{% for tag in m.tags %}<span>{{ tag }}</span>{% endfor %}</div>{% endif %}
+    {% if m.contributions %}
+    <h4>Responsibilities</h4>
+    <ul class="pdo">{% for point in m.contributions %}<li>{{ point }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if m.presents %}<p class="ppresent"><b>Presents in the viva:</b> {{ m.presents }}</p>{% endif %}
+  </div>
+</article>
+{% endfor %}
+
+<h2 class="reveal" style="margin-top:34px">What we built</h2>
+<div class="feat">
+  <div class="reveal"><i>&#9878;&#65039;</i><h3>Fair ranking (FVRS)</h3><p>Shops with fewer recent orders earn more visibility, so busy shops do not always win.</p></div>
+  <div class="reveal"><i>&#127793;</i><h3>New-shop boost</h3><p>A new shop starts with full fairness points and a neutral rating, so it is not buried for being new.</p></div>
+  <div class="reveal"><i>&#128666;</i><h3>Smart delivery grouping</h3><p>A prototype that groups packed orders going to places within 1 km into one trip.</p></div>
+  <div class="reveal"><i>&#128101;</i><h3>Three roles</h3><p>Customers shop, sellers manage products and orders, and the admin approves shops and handles complaints.</p></div>
+  <div class="reveal"><i>&#11088;</i><h3>Reviews and complaints</h3><p>Customers review shops and products after delivery, and raise complaints the admin can resolve.</p></div>
+  <div class="reveal"><i>&#128274;</i><h3>Built with care</h3><p>Hashed passwords, form protection against forged requests, and a lock after repeated wrong logins.</p></div>
 </div>
+
+<h2 class="reveal">Built with</h2>
+<div class="tech reveal"><span>Python</span><span>Flask</span><span>Jinja2</span><span>MySQL</span><span>JavaScript</span><span>CSS</span><span>Render</span><span>Aiven</span></div>
 
 <div class="box reveal">
   <h2>Contact</h2>
   <p>Ankit Mishra and team</p>
   {% if contact_email %}<p>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>{% endif %}
   {% if contact_phone %}<p>Phone: <a href="tel:+{{ contact_phone_digits }}">{{ contact_phone }}</a></p>{% endif %}
+  <p><a href="/contact">Send us a message</a></p>
 </div>
 {% endblock %}

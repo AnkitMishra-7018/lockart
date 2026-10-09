@@ -85,3 +85,25 @@
     box.addEventListener("input", update); update();
   });
 })();
+(function () {
+  var nums = document.querySelectorAll(".count[data-to]"); if (!nums.length) return;
+  var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function text(el, v) { return (el.dataset.prefix || "") + v.toFixed(parseInt(el.dataset.decimals || "0", 10)) + (el.dataset.suffix || ""); }
+  function run(el) {
+    var to = parseFloat(el.dataset.to), t0 = null;
+    if (still) { el.textContent = text(el, to); return; }
+    function step(t) {
+      if (!t0) t0 = t;
+      var p = Math.min((t - t0) / 1300, 1), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = text(el, to * e);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { run(e.target); io.unobserve(e.target); } });
+    }, { threshold: 0.4 });
+    nums.forEach(function (el) { el.textContent = text(el, 0); io.observe(el); });
+  } else { nums.forEach(function (el) { el.textContent = text(el, parseFloat(el.dataset.to)); }); }
+})();
