@@ -28,6 +28,9 @@ app.config.update(
 app.teardown_appcontext(close_leftover_connections)   # always return database connections
 
 # ---------- Contact details (read from environment variables, never typed into the code) ----------
+# Demo mode adds one-click demo logins to the login pages. Keep it OFF normally (DEMO_MODE=0) and switch it on for a demonstration.
+DEMO_MODE = os.environ.get("DEMO_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+
 CONTACT_PHONE = os.environ.get("CONTACT_PHONE", "").strip()
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "").strip()
 _phone_digits = re.sub(r"\D", "", CONTACT_PHONE)
@@ -631,6 +634,54 @@ def newsletter():
         conn.close()
         flash("Thanks for subscribing! We will keep you updated.", "success")
     return redirect(request.referrer or url_for("home"))
+
+
+# ---------- One-click demo logins (only when DEMO_MODE is on) ----------
+DEMO_LOGINS = {
+    "customer": ("customer", "demo.customer@example.com"),
+    "bigmart": ("seller", "demo.bigmart@example.com"),      # a busy shop
+    "newstore": ("seller", "demo.newstore@example.com"),    # a brand-new shop (cold start)
+}
+
+
+@app.route("/demo-login/<who>", methods=["POST"])
+def demo_login(who):
+    if not DEMO_MODE or who not in DEMO_LOGINS:
+        abort(404)
+    role, email = DEMO_LOGINS[who]
+    conn = get_connection()
+    cursor = conn.cursor()
+    if role == "customer":
+        cursor.execute("SELECT customer_id, full_name FROM customers WHERE email = %s", (email,))
+    else:
+        cursor.execute("SELECT seller_id, shop_name FROM sellers WHERE email = %s AND status = 'approved'", (email,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row:
+        flash("The demo account was not found. Ask the admin to reset the demo data.", "error")
+        return redirect(url_for("login" if role == "customer" else "seller_login"))
+    session.clear()
+    if role == "customer":
+        session["customer_id"], session["customer_name"] = row[0], row[1]
+        flash("Logged in as the demo customer.", "success")
+        return redirect(url_for("home"))
+    session["seller_id"], session["seller_shop"] = row[0], row[1]
+    flash("Logged in as " + row[1] + ".", "success")
+    return redirect(url_for("seller_dashboard"))
+
+
+# ---------- FVRS calculator (a what-if page that uses the real shops) ----------
+@app.route("/fvrs-calculator")
+def fvrs_calculator():
+    conn = get_connection()
+    cursor = conn.cursor()
+    results = compute_base_scores(cursor)
+    cursor.close()
+    conn.close()
+    shops = [{"name": r["shop_name"], "avg": r["avg_orders"], "sales": r["sales_volume"],
+              "rating_score": r["rating_score"], "completion": r["completion_rate"]} for r in results]
+    return render_template("fvrs_calculator.html", shops=shops)
 
 
 FAQS = [
@@ -1481,7 +1532,8 @@ def inject_cart_count():
     return {"cart_count": sum(cart.values()),
             "contact_email": CONTACT_EMAIL,
             "contact_phone": CONTACT_PHONE,
-            "contact_phone_digits": CONTACT_PHONE_DIGITS}
+            "contact_phone_digits": CONTACT_PHONE_DIGITS,
+            "demo_mode": DEMO_MODE}
 
 
 @app.route("/cart/add/<int:product_id>", methods=["POST"])
@@ -2398,7 +2450,14 @@ def admin_fvrs():
     results = compute_base_scores(cursor)
     cursor.close()
     conn.close()
-    return render_template("admin_fvrs.html", results=results)
+    # Without FVRS a shop would simply be ranked by its recent orders (busiest first).
+    by_orders = sorted(results, key=lambda r: (-r["avg_orders"], -r["sales_volume"], r["shop_name"]))
+    for position, r in enumerate(by_orders, 1):
+        r["orders_only_rank"] = position
+    for position, r in enumerate(results, 1):
+        r["rank_shift"] = r["orders_only_rank"] - position      # positive = FVRS moved the shop up
+    moved_up = sum(1 for r in results if r["rank_shift"] > 0)
+    return render_template("admin_fvrs.html", results=results, moved_up=moved_up)
 
 
 # =====================================================

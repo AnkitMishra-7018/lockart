@@ -1,21 +1,40 @@
 {% extends "base.html" %}
-{% from "_macros.html" import product_card %}
-{% block title %}{{ shop.shop_name }}{% endblock %}
+
+{% block title %}Shop ranking{% endblock %}
 {% block main_class %}wide{% endblock %}
+
 {% block content %}
-<section class="shop-hero" {% if cover %}style="background-image:url('{{ url_for('static', filename=cover) }}')"{% endif %}>
-  <div class="shop-hero-in"><span class="avatar">{{ shop.shop_name[:2]|upper }}</span>
-    <div><h1>{{ shop.shop_name }}</h1><p>{{ shop.shop_address }}</p></div></div></section>
-<div class="stats">
-  <div class="stat"><span>{% if info and info.review_count %}&#9733; {{ info.rating }}{% else %}New{% endif %}</span>Rating</div>
-  <div class="stat"><span>{{ products|length }}</span>Products</div>
-  <div class="stat"><span>{{ info.avg_orders if info else 0 }}</span>Orders a day (7 days)</div>
-  {% if info and info.distance_km is not none %}<div class="stat"><span>{{ info.distance_km }} km</span>From you</div>{% endif %}
-</div>
-{% if info and info.is_new %}<p class="chip">New shop: just opened on Lockart</p>{% endif %}
-<section class="sec"><h2>Products</h2>
-  <div class="grid">{% for p in products %}{{ product_card(p, {}, False) }}{% else %}<p class="muted">No products in stock right now.</p>{% endfor %}</div></section>
-<section class="sec"><h2>Shop reviews</h2>
-  {% for r in reviews %}<div class="review"><strong>{{ r.full_name }}</strong> &ndash; &#9733; {{ r.rating }}<p>{{ r.review_text }}</p></div>
-  {% else %}<p class="muted">No shop reviews yet.</p>{% endfor %}</section>
+    <h1>How shops are ranked (FVRS)</h1>
+    <p class="muted">
+        Final score = 50% order fairness + 15% rating + 15% completion + 10% sales volume + 10% distance.
+        Shops with fewer recent orders get more fairness points, so small and new shops stay visible.
+    </p>
+    <p><a class="btn ghost" href="/fvrs-calculator">Try the FVRS calculator</a></p>
+    {% if not has_location %}
+        <p class="muted">Log in as a customer to include distance from your address. Until then,
+        every shop gets the same neutral distance score.</p>
+    {% endif %}
+
+    <table>
+        <tr>
+            <th>#</th><th>Shop</th><th>Distance</th><th>Fairness</th><th>Rating</th>
+            <th>Completion</th><th>Sales</th><th>Distance score</th><th>Final score</th>
+        </tr>
+        {% for r in ranking %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ r.shop_name }} {% if r.is_new %}<span class="tag-new">New shop</span>{% endif %}</td>
+            <td>{% if r.distance_km is not none %}{{ r.distance_km }} km{% else %}&ndash;{% endif %}</td>
+            <td>{{ r.fairness_score }}</td>
+            <td>{{ r.rating_score }}</td>
+            <td>{{ r.completion_rate }}</td>
+            <td>{{ r.sales_score }}</td>
+            <td>{{ r.distance_score }}</td>
+            <td><strong>{{ r.final_score }}</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9">No approved shops yet.</td></tr>
+        {% endfor %}
+    </table>
+    <p class="muted">Rating, completion, sales and fairness are shown as scores out of 100.</p>
 {% endblock %}

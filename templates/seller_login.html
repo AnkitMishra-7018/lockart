@@ -14,4 +14,12 @@
         <button type="submit">Login</button>
     </form>
     <p>New seller? <a href="/seller/register">Register your shop</a></p>
+
+    {% if demo_mode %}
+    <div class="demo-login">
+        <p><strong>Demo mode</strong>: sign in with one click</p>
+        <form method="POST" action="/demo-login/bigmart"><button type="submit" class="small">Busy shop (Demo Big Mart)</button></form>
+        <form method="POST" action="/demo-login/newstore"><button type="submit" class="small">New shop (Demo New Store)</button></form>
+    </div>
+    {% endif %}
 {% endblock %}

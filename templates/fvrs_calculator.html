@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}FVRS calculator{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="dash-head">
+  <div><h1 style="margin:0">FVRS calculator</h1>
+    <span class="muted">Try a what-if: how would a shop rank next to the real Lockart shops?</span></div>
+  <div><a class="btn ghost" href="/shops">See the real ranking</a></div>
+</div>
+<p class="muted">Final score = 50% order fairness + 15% rating + 15% completion + 10% sales volume + 10% distance.
+  Move the sliders to describe a shop. The other shops are the real shops on Lockart right now, and they use the neutral distance score (50),
+  as for a visitor who is not logged in.</p>
+
+<div class="presets">
+  <button type="button" class="small" data-preset="new">New shop (cold start)</button>
+  <button type="button" class="small" data-preset="small">Good small shop</button>
+  <button type="button" class="small" data-preset="busy">Very busy shop</button>
+</div>
+
+<div class="calc">
+  <div class="box">
+    <h3>Your shop</h3>
+    <div class="sl"><label for="c-orders">Delivered orders per day (7-day average) <output id="o-orders"></output></label>
+      <input type="range" id="c-orders" min="0" max="40" step="0.5" value="0"></div>
+    <div class="sl"><label for="c-rating">Average review rating <output id="o-rating"></output></label>
+      <input type="range" id="c-rating" min="1" max="5" step="0.1" value="4"></div>
+    <div class="sl"><label for="c-reviews">Number of reviews <output id="o-reviews"></output></label>
+      <input type="range" id="c-reviews" min="0" max="100" step="1" value="0"></div>
+    <div class="sl"><label for="c-del">Orders delivered, all time <output id="o-del"></output></label>
+      <input type="range" id="c-del" min="0" max="300" step="1" value="0"></div>
+    <div class="sl"><label for="c-can">Orders cancelled, all time <output id="o-can"></output></label>
+      <input type="range" id="c-can" min="0" max="60" step="1" value="0"></div>
+    <div class="sl"><label for="c-sales">Sales in the last 7 days (rupees) <output id="o-sales"></output></label>
+      <input type="range" id="c-sales" min="0" max="60000" step="100" value="0"></div>
+    <div class="sl"><label for="c-dist">Distance from the customer (km) <output id="o-dist"></output></label>
+      <input type="range" id="c-dist" min="0" max="15" step="0.5" value="2"></div>
+  </div>
+
+  <div class="box">
+    <h3>Result</h3>
+    <div class="bigrank" id="rank"></div>
+    <table id="parts"><tr><th>Part</th><th>Score</th><th>Weight</th><th>Points</th></tr></table>
+    <h3 style="margin-top:18px">All shops, final score</h3>
+    <div id="bars"></div>
+    <p class="muted">The scores of the other shops can move too, because fairness and sales are compared across all shops
+      (the lowest to the highest value). A rating of 3.5 with no reviews is the neutral start for a new shop.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SHOPS = {{ shops|tojson }};
+  var $ = function (id) { return document.getElementById(id); };
+  var inputs = ["orders", "rating", "reviews", "del", "can", "sales", "dist"];
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function scaleLow(v, lo, hi) { return hi === lo ? 100 : (hi - v) / (hi - lo) * 100; }   // fewer orders = more fairness
+  function scaleHigh(v, lo, hi) { return hi === lo ? 100 : (v - lo) / (hi - lo) * 100; }  // more sales = more points
+  function f1(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
+  function run() {
+    var x = {};
+    inputs.forEach(function (k) { x[k] = parseFloat($("c-" + k).value); $("o-" + k).textContent = x[k]; });
+    $("o-sales").textContent = "\u20B9" + x.sales;
+
+    var avgs = SHOPS.map(function (s) { return s.avg; }).concat([x.orders]);
+    var sals = SHOPS.map(function (s) { return s.sales; }).concat([x.sales]);
+    var aLo = Math.min.apply(null, avgs), aHi = Math.max.apply(null, avgs);
+    var sLo = Math.min.apply(null, sals), sHi = Math.max.apply(null, sals);
+
+    var smoothed = (x.rating * x.reviews + 5 * 3.5) / (x.reviews + 5);
+    var ratingScore = clamp((smoothed - 1) / 4 * 100, 0, 100);
+    var completion = (x.del + x.can === 0) ? 100 : x.del / (x.del + x.can) * 100;
+    var fair = scaleLow(x.orders, aLo, aHi), salesScore = scaleHigh(x.sales, sLo, sHi);
+    var distScore = Math.max(0, 100 * (1 - x.dist / 10));
+    var base = 0.5 * fair + 0.15 * ratingScore + 0.15 * completion + 0.10 * salesScore;
+    var final = base + 0.10 * distScore;
+
+    var rows = [["Order fairness", fair, "50%", 0.5 * fair], ["Seller rating (" + f1(smoothed) + " / 5)", ratingScore, "15%", 0.15 * ratingScore],
+                ["Completion rate", completion, "15%", 0.15 * completion], ["Sales volume", salesScore, "10%", 0.10 * salesScore],
+                ["Distance", distScore, "10%", 0.10 * distScore]];
+    var html = "<tr><th>Part</th><th>Score</th><th>Weight</th><th>Points</th></tr>";
+    rows.forEach(function (r) { html += "<tr><td>" + r[0] + "</td><td>" + f1(r[1]) + "</td><td>" + r[2] + "</td><td>" + f1(r[3]) + "</td></tr>"; });
+    html += "<tr><td><strong>Final score</strong></td><td></td><td></td><td><strong>" + f1(final) + "</strong></td></tr>";
+    $("parts").innerHTML = html;
+
+    var all = SHOPS.map(function (s) {
+      var b = 0.5 * scaleLow(s.avg, aLo, aHi) + 0.15 * s.rating_score + 0.15 * s.completion + 0.10 * scaleHigh(s.sales, sLo, sHi);
+      return { name: s.name, score: b + 0.10 * 50, me: false };
+    });
+    all.push({ name: "Your shop", score: final, me: true });
+    all.sort(function (a, b) { return b.score - a.score; });
+    var place = all.findIndex(function (a) { return a.me; }) + 1;
+    $("rank").textContent = "Your shop would rank #" + place + " of " + all.length + " (final score " + f1(final) + ")";
+    var bars = "";
+    all.forEach(function (a) {
+      var safe = a.name.replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; });
+      bars += '<div class="hb' + (a.me ? " me" : "") + '"><b>' + safe + '</b><div><i style="width:' + clamp(a.score, 0, 100) + '%"></i></div><em>' + f1(a.score) + "</em></div>";
+    });
+    $("bars").innerHTML = bars;
+  }
+
+  var PRESETS = {
+    "new":   { orders: 0,  rating: 3.5, reviews: 0,  del: 0,   can: 0,  sales: 0,     dist: 2 },
+    "small": { orders: 3,  rating: 4.6, reviews: 12, del: 40,  can: 2,  sales: 6000,  dist: 2 },
+    "busy":  { orders: 30, rating: 4.4, reviews: 80, del: 280, can: 15, sales: 50000, dist: 2 }
+  };
+  inputs.forEach(function (k) { $("c-" + k).addEventListener("input", run); });
+  document.querySelectorAll("[data-preset]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var p = PRESETS[b.dataset.preset];
+      inputs.forEach(function (k) { $("c-" + k).value = p[k]; });
+      run();
+    });
+  });
+  run();
+})();
+</script>
+{% endblock %}

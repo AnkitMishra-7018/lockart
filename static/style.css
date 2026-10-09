@@ -234,3 +234,15 @@ a.btn.ghost:hover{background:var(--gl);color:var(--g2)}
   footer.site{padding-bottom:70px}
 }
 @media(max-width:860px){footer.site{padding-bottom:70px}}
+/* ---- FVRS calculator, comparison and demo login ---- */
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.sl{margin-top:12px}.sl label{display:flex;justify-content:space-between;margin:0}.sl output{color:var(--g);font-weight:700}
+.sl input[type=range]{padding:0;margin:6px 0 0;accent-color:var(--g)}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}.presets button{margin:0}
+.calc table td:nth-child(n+2),.calc table th:nth-child(n+2){text-align:right}
+.hb.me b,.hb.me em{color:var(--g)}.hb.me i{background:var(--a)}
+.bigrank{font-size:1.25rem;font-weight:700;color:var(--g);margin:6px 0 12px}
+.shift.up{color:var(--g);font-weight:700}.shift.down{color:#B83B3B;font-weight:700}.shift.same{color:var(--mu)}
+.demo-login{margin-top:18px;padding:14px;border:1px dashed var(--a);border-radius:var(--r);background:var(--al)}
+.demo-login p{margin:0 0 6px}.demo-login form{display:inline-block;margin-right:6px}
+@media(max-width:860px){.calc{grid-template-columns:1fr}}

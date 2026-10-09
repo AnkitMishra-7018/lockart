@@ -14,4 +14,11 @@
         <button type="submit">Login</button>
     </form>
     <p>New here? <a href="/register">Create an account</a></p>
+
+    {% if demo_mode %}
+    <div class="demo-login">
+        <p><strong>Demo mode</strong>: sign in with one click</p>
+        <form method="POST" action="/demo-login/customer"><button type="submit" class="small">Demo customer</button></form>
+    </div>
+    {% endif %}
 {% endblock %}

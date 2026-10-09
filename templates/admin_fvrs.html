@@ -7,6 +7,23 @@
     <span class="muted">Base score = 50% fairness + 15% rating + 15% completion + 10% sales (maximum 90). The distance score (10%) is added for each customer when they search.</span></div>
   <div><a class="btn ghost" href="/admin/dashboard">Back to dashboard</a></div>
 </div>
+<div class="box reveal">
+  <h3>Without FVRS and with FVRS</h3>
+  <p class="muted">Without FVRS, shops would be ranked only by recent orders, so the busiest shop is always first.
+    With FVRS, fewer recent orders earn more fairness points. Base score only; distance is added later for each customer.
+    {% if moved_up %}<strong>FVRS moves {{ moved_up }} shop(s) up.</strong>{% else %}No shop changes place right now.{% endif %}</p>
+  <div class="tablewrap" style="margin-bottom:0"><table id="compare-table">
+    <tr><th>Shop</th><th>Avg orders/day</th><th>Rank by orders only</th><th>Rank with FVRS</th><th>Change</th></tr>
+    {% for r in results %}
+    <tr><td>{{ r.shop_name }}</td><td>{{ r.avg_orders }}</td><td>#{{ r.orders_only_rank }}</td><td>#{{ loop.index }}</td>
+      <td>{% if r.rank_shift > 0 %}<span class="shift up">&#9650; {{ r.rank_shift }} up</span>{% elif r.rank_shift < 0 %}<span class="shift down">&#9660; {{ -r.rank_shift }} down</span>{% else %}<span class="shift same">same</span>{% endif %}</td></tr>
+    {% else %}
+    <tr><td colspan="5">No approved sellers yet.</td></tr>
+    {% endfor %}
+  </table></div>
+  <p><a href="/fvrs-calculator">Try the FVRS calculator</a></p>
+</div>
+
 <div class="tools-row">
   <input class="tsearch" data-table="fvrs-table" type="search" placeholder="Search shop..." aria-label="Search shops">
   <span class="muted tcount"></span>
