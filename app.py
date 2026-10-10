@@ -287,6 +287,40 @@ def home():
             "JOIN orders o ON o.order_id = oi.order_id WHERE o.customer_id = %s) "
             "ORDER BY p.created_at DESC LIMIT 4", (session["customer_id"],))
         reorder = cursor.fetchall()
+
+    # Pocket-friendly row: the cheapest products that are in stock
+    cursor.execute(PRODUCT_SELECT + "AND p.price <= 50 ORDER BY p.price ASC, p.created_at DESC LIMIT 4")
+    budget = cursor.fetchall()
+
+    # Recently viewed: product numbers remembered in the visitor's session (see product_detail)
+    viewed = []
+    viewed_ids = [i for i in session.get("viewed", []) if isinstance(i, int)][:8]
+    if viewed_ids:
+        marks = ",".join(["%s"] * len(viewed_ids))
+        cursor.execute(PRODUCT_SELECT + "AND p.product_id IN (" + marks + ")", tuple(viewed_ids))
+        by_id = {row[0]: row for row in cursor.fetchall()}
+        viewed = [by_id[i] for i in viewed_ids if i in by_id][:4]
+
+    # Real numbers for the "Lockart in numbers" band
+    stats = {}
+    cursor.execute("SELECT COUNT(*) FROM sellers WHERE status = 'approved'")
+    stats["shops"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM products p JOIN sellers s ON s.seller_id = p.seller_id "
+                   "WHERE p.is_active = 1 AND s.status = 'approved'")
+    stats["products"] = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'delivered'")
+    stats["delivered"] = cursor.fetchone()[0]
+    cursor.execute("SELECT (SELECT COUNT(*) FROM seller_reviews) + (SELECT COUNT(*) FROM product_reviews)")
+    stats["reviews"] = cursor.fetchone()[0]
+
+    # The three newest written shop reviews (any rating), shown with the reviewer's first name only
+    cursor.execute(
+        "SELECT r.rating, r.review_text, c.full_name, s.shop_name FROM seller_reviews r "
+        "JOIN customers c ON c.customer_id = r.customer_id JOIN sellers s ON s.seller_id = r.seller_id "
+        "WHERE s.status = 'approved' AND CHAR_LENGTH(TRIM(r.review_text)) >= 8 "
+        "AND r.review_text NOT LIKE 'Demo review%' ORDER BY r.review_date DESC, r.review_id DESC LIMIT 3")
+    reviews = [{"rating": row[0], "text": row[1], "name": (row[2].split() or ["Customer"])[0], "shop": row[3]}
+               for row in cursor.fetchall()]
     cursor.close()
     conn.close()
 
@@ -310,7 +344,8 @@ def home():
 
     return render_template("home.html", picks=picks[:8], from_new=from_new, reorder=reorder,
                            shops=shops, scores=scores, show_scores=SHOW_FVRS_ON_CARDS,
-                           categories=CATEGORY_TILES)
+                           categories=CATEGORY_TILES, budget=budget, viewed=viewed,
+                           stats=stats, reviews=reviews)
 
 
 PER_PAGE = 12
@@ -466,6 +501,9 @@ def product_detail(product_id):
         conn.close()
         flash("That product is not available.", "error")
         return redirect(url_for("home"))
+
+    # Remember this product for the "Recently viewed" row on the home page (newest first, at most 8)
+    session["viewed"] = ([product_id] + [i for i in session.get("viewed", []) if i != product_id])[:8]
 
     cursor.execute("SELECT image_path FROM product_images WHERE product_id = %s", (product_id,))
     images = [row["image_path"] for row in cursor.fetchall()]

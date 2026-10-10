@@ -311,3 +311,26 @@ a.btn.ghost:hover{background:var(--gl);color:var(--g2)}
   .person{grid-template-columns:240px 1fr;gap:22px}.person.flip{grid-template-columns:1fr 240px}
   .pphoto,.person.lead .pphoto{width:220px}
 }
+/* ---- Home page polish ---- */
+.hero .slide{background-position:center calc(50% + var(--py,0px))}
+.story{position:relative;overflow:hidden;border-radius:var(--r);margin:40px 0;color:#fff;min-height:320px;display:flex;align-items:center;
+  background:linear-gradient(90deg,rgba(11,79,63,.93),rgba(11,79,63,.72)),url('/static/img/heroes/hero_groceries.jpg') center calc(50% + var(--py,0px))/cover}
+.story-in{padding:44px 40px;max-width:640px}
+.story .pill{display:inline-block}
+.story h2{font-size:2rem;margin:10px 0 10px;color:#fff}
+.story p{color:#E3F4EC;line-height:1.7;margin:0 0 8px}
+.story .btn{background:var(--a);color:#3a2300}
+.numsband{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:36px 0;padding:26px 18px;border-radius:var(--r);background:linear-gradient(135deg,#0F6E56,#14566A);color:#fff;text-align:center}
+.numsband b{display:block;font-size:2.4rem;line-height:1.1}.numsband span{color:#D4EEE5;font-size:14px}
+.revgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:12px}
+.rcard{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:20px;box-shadow:var(--sh);position:relative}
+.rcard::before{content:"\201C";position:absolute;right:16px;top:2px;font-size:3.6rem;color:var(--gl);font-family:Georgia,serif;line-height:1}
+.rstars span{color:#d4dbd7;font-size:17px}.rstars span.on{color:#F5A623}
+.rcard p{margin:10px 0 12px;line-height:1.6}
+.rcard .who{font-size:13px;color:var(--mu)}.rcard .who strong{color:var(--tx)}
+.nlteaser{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin:36px 0 0;padding:28px 32px;border-radius:var(--r);background:var(--al);border:1px solid #F6D9A5}
+.nlteaser h2{margin:0 0 4px}.nlteaser p{margin:0;color:var(--mu)}
+.nlform{display:flex;gap:8px;flex:1;min-width:260px;max-width:440px}
+.nlform input{margin:0}.nlform button{margin:0;background:var(--a);color:#3a2300;white-space:nowrap}
+@media(max-width:860px){.numsband{grid-template-columns:repeat(2,1fr)}.story-in{padding:30px 22px}.story h2{font-size:1.6rem}}
+@media(max-width:520px){.nlteaser{padding:22px 18px}.nlform{max-width:none}}

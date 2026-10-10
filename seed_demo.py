@@ -27,6 +27,13 @@ DEMO_SELLERS = [
     ("Demo New Store",    "demo.newstore@example.com", "Colony D", 0,  0, []),
 ]
 
+# Sample review sentences, picked by position (not at random, so the demo numbers never change)
+REVIEW_TEXTS = {
+    5: ["Fresh items and very quick delivery.", "Great service, I will order again.", "Packed well and arrived on time."],
+    4: ["Good quality and fair prices.", "Nice shop, the delivery was a little late."],
+    3: ["Okay overall, the packing could be better."],
+}
+
 # name, category, price, photo file (in static/img/products)
 CATALOGUE = {
     "demo.bigmart@example.com": [
@@ -146,11 +153,12 @@ def seed(cursor):
             make_order("cancelled", order_date, None)
 
         # Seller reviews attach to delivered orders (one review per order)
-        for rating, order_id in zip(ratings, delivered_ids):
+        for position, (rating, order_id) in enumerate(zip(ratings, delivered_ids)):
+            texts = REVIEW_TEXTS.get(rating, ["Thank you."])
             cursor.execute(
                 "INSERT INTO seller_reviews (customer_id, seller_id, order_id, rating, review_text) "
                 "VALUES (%s, %s, %s, %s, %s)",
-                (customer_id, seller_id, order_id, rating, "Demo review"),
+                (customer_id, seller_id, order_id, rating, texts[position % len(texts)]),
             )
 
         print("Created", shop, "-", delivered, "delivered,", cancelled, "cancelled,",

@@ -9,7 +9,7 @@
   {"img":"img/heroes/hero_dairy.jpg","tag":"New shops welcome","title":"New here? You start with a boost","text":"New sellers get full fairness points and a neutral rating, so nobody is buried for being new.","link":"/seller/register","cta":"Open your shop"},
   {"img":"img/covers/cover_fresh.jpg","tag":"Pay on delivery","title":"Order now, pay when it arrives","text":"Admin-approved local shops and cash on delivery on every order.","link":"/search","cta":"Browse products"}
 ] %}
-<section class="hero" id="hero" aria-label="Lockart features">
+<section class="hero" id="hero" aria-label="Lockart features" data-parallax>
   {% for s in slides %}
   <div class="slide {% if loop.first %}on{% endif %}" style="background-image:url('{{ url_for('static', filename=s.img) }}')">
     <div class="slide-text"><span class="pill">{{ s.tag }}</span><h2>{{ s.title }}</h2><p>{{ s.text }}</p><a class="btn" href="{{ s.link }}">{{ s.cta }}</a></div>
@@ -31,6 +31,9 @@
     <a class="cat" href="/search?category={{ name|urlencode }}"><img src="{{ url_for('static', filename='img/products/thumb/' + img) }}" alt="" loading="lazy"><span>{{ name }}</span></a>{% endfor %}
   </div></section>
 
+{% if viewed %}<section class="sec reveal"><div class="sec-h"><h2>Recently viewed</h2></div>
+  <div class="grid">{% for p in viewed %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
+
 {% if reorder %}<section class="sec reveal"><div class="sec-h"><h2>Order again</h2></div>
   <div class="grid">{% for p in reorder %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
 
@@ -45,10 +48,28 @@
 <section class="sec reveal"><div class="sec-h"><h2>Picked for you</h2><a href="/search">View all</a></div>
   <div class="grid">{% for p in picks %}{{ product_card(p, scores, show_scores) }}{% else %}<p class="muted">No products yet.</p>{% endfor %}</div></section>
 
+{% if budget %}<section class="sec reveal"><div class="sec-h"><h2>Pocket-friendly picks</h2><a href="/search?max_price=50&amp;in_stock=1&amp;sort=price_asc">Everything under &#8377;50</a></div>
+  <div class="grid">{% for p in budget %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
+
+<section class="story reveal" data-parallax>
+  <div class="story-in"><span class="pill">Our story</span>
+    <h2>Why we built Lockart</h2>
+    <p>Big marketplaces mostly show the sellers who already get the most orders. Small neighbourhood shops can sell very good products, yet few customers ever find them.</p>
+    <p>Lockart ranks shops with FVRS, a fair visibility system: fewer recent orders earn more visibility, new shops start with a boost, and nearby orders can share one delivery trip.</p>
+    <a class="btn" href="/about">Meet the team</a></div>
+</section>
+
 <section class="sec how reveal"><h2>How Lockart works</h2>
   <div class="steps"><div><b>1</b><h3>Pick local shops</h3><p>Search products from approved shops in your colony.</p></div>
     <div><b>2</b><h3>Order, pay on delivery</h3><p>Place one order per shop and pay cash when it arrives.</p></div>
     <div><b>3</b><h3>One trip, many orders</h3><p>Nearby orders are grouped so delivery is faster.</p></div></div></section>
+
+<section class="numsband reveal" aria-label="Lockart in numbers">
+  <div><b class="count" data-to="{{ stats.shops }}">{{ stats.shops }}</b><span>local shops</span></div>
+  <div><b class="count" data-to="{{ stats.products }}">{{ stats.products }}</b><span>products</span></div>
+  <div><b class="count" data-to="{{ stats.delivered }}">{{ stats.delivered }}</b><span>orders delivered</span></div>
+  <div><b class="count" data-to="{{ stats.reviews }}">{{ stats.reviews }}</b><span>customer reviews</span></div>
+</section>
 
 <section class="sec fair reveal"><h2>Fair ranking, explained</h2>
   <p class="muted">A busy shop already has customers. A new shop does not. Lockart gives fewer recent orders more visibility.</p>
@@ -58,6 +79,14 @@
 
 {% if from_new %}<section class="sec reveal"><div class="sec-h"><h2>From new shops</h2></div>
   <div class="grid">{% for p in from_new %}{{ product_card(p, scores, show_scores) }}{% endfor %}</div></section>{% endif %}
+
+{% if reviews %}<section class="sec reveal"><div class="sec-h"><h2>Recent reviews</h2></div>
+  <div class="revgrid">{% for r in reviews %}<div class="rcard">
+    <div class="rstars" aria-label="{{ r.rating }} out of 5">{% for i in range(5) %}<span class="{{ 'on' if i < r.rating else '' }}">&#9733;</span>{% endfor %}</div>
+    <p>{{ r.text }}</p><div class="who"><strong>{{ r.name }}</strong> on {{ r.shop }}</div></div>{% endfor %}</div></section>{% endif %}
+
+<section class="nlteaser reveal"><div><h2>Get updates from local shops</h2><p>New shops and fresh arrivals, in your inbox. No spam.</p></div>
+  <form class="nlform" method="POST" action="/newsletter"><input type="email" name="email" placeholder="Your email address" aria-label="Email address" maxlength="100" required><button type="submit">Subscribe</button></form></section>
 
 {% if not session.get('seller_id') %}
 <section class="cta reveal"><div><h2>Own a small shop?</h2><p>Join Lockart and reach customers in your neighbourhood.</p></div><a class="btn" href="/seller/register">Sell with us</a></section>{% endif %}

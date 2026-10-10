@@ -107,3 +107,16 @@
     nums.forEach(function (el) { el.textContent = text(el, 0); io.observe(el); });
   } else { nums.forEach(function (el) { el.textContent = text(el, parseFloat(el.dataset.to)); }); }
 })();
+(function () {
+  var items = document.querySelectorAll("[data-parallax]"); if (!items.length) return;
+  if (window.matchMedia && (matchMedia("(prefers-reduced-motion: reduce)").matches || matchMedia("(max-width: 860px)").matches)) return;
+  function update() {
+    var vh = window.innerHeight;
+    items.forEach(function (el) {
+      var r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > vh + 50) return;
+      var shift = (r.top + r.height / 2 - vh / 2) * -0.12;
+      el.style.setProperty("--py", Math.max(-40, Math.min(40, shift)).toFixed(1) + "px");
+    });
+  }
+  window.addEventListener("scroll", update, { passive: true }); window.addEventListener("resize", update); update();
+})();
