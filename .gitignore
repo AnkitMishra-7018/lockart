@@ -15,6 +15,7 @@ __pycache__/
 # Database backups and dumps
 *.sql
 *.zip
+!schema.sql
 
 # Uploaded files
 static/uploads/
