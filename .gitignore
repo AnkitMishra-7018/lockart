@@ -1,7 +1,20 @@
+# Python virtual environment and cache
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Environment secrets
 .env
-static/uploads/
+.env.*
+!.env.example
+
+# SSL certificates and private keys
+*.pem
+*.key
+
+# Database backups and dumps
+*.sql
 *.zip
-local_market_data.sql
+
+# Uploaded files
+static/uploads/
